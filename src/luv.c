@@ -43,6 +43,7 @@
 #include "work.c"
 #include "misc.c"
 #include "constants.c"
+#include "device.c"
 
 static const luaL_Reg luv_functions[] = {
   // loop.c
@@ -158,6 +159,10 @@ static const luaL_Reg luv_functions[] = {
   {"tty_set_mode", luv_tty_set_mode},
   {"tty_reset_mode", luv_tty_reset_mode},
   {"tty_get_winsize", luv_tty_get_winsize},
+
+  // device.c
+  {"new_device", luv_new_device},
+  {"device_ioctl", luv_device_ioctl},
 
   // udp.c
   {"new_udp", luv_new_udp},
@@ -408,6 +413,11 @@ static const luaL_Reg luv_tty_methods[] = {
   {NULL, NULL}
 };
 
+static const luaL_Reg luv_device_methods[] = {
+  {"ioctl", luv_device_ioctl},
+  {NULL, NULL}
+};
+
 static const luaL_Reg luv_udp_methods[] = {
   {"open", luv_udp_open},
   {"bind", luv_udp_bind},
@@ -467,6 +477,13 @@ static void luv_handle_init(lua_State* L) {
   lua_rawset(L, -3);
 
   luaL_getmetatable(L, "uv_tty");
+  lua_getfield(L, -1, "__index");
+  luaL_setfuncs(L, luv_stream_methods, 0);
+  lua_pop(L, 1);
+  lua_pushboolean(L, 1);
+  lua_rawset(L, -3);
+
+  luaL_getmetatable(L, "uv_device");
   lua_getfield(L, -1, "__index");
   luaL_setfuncs(L, luv_stream_methods, 0);
   lua_pop(L, 1);

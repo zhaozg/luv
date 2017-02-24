@@ -62,6 +62,7 @@ if(WIN32)
     ${LIBUVDIR}/src/win/atomicops-inl.h
     ${LIBUVDIR}/src/win/core.c
     ${LIBUVDIR}/src/win/detect-wakeup.c
+    ${LIBUVDIR}/src/win/device.c
     ${LIBUVDIR}/src/win/dl.c
     ${LIBUVDIR}/src/win/error.c
     ${LIBUVDIR}/src/win/fs-event.c
@@ -104,6 +105,7 @@ else()
     ${LIBUVDIR}/src/unix/async.c
     ${LIBUVDIR}/src/unix/atomic-ops.h
     ${LIBUVDIR}/src/unix/core.c
+    ${LIBUVDIR}/src/unix/device.c
     ${LIBUVDIR}/src/unix/dl.c
     ${LIBUVDIR}/src/unix/fs.c
     ${LIBUVDIR}/src/unix/getaddrinfo.c
