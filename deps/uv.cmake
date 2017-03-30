@@ -23,108 +23,120 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#project(libuv C)
+
 include(CheckTypeSize)
 
 cmake_minimum_required(VERSION 2.8.9)
 
-set(LIBUVDIR ${CMAKE_CURRENT_LIST_DIR}/libuv)
+IF(DEFINED ENV{LIBUV_DIR})
+  SET(LIBUV_DIR $ENV{LIBUV_DIR})
+  MESSAGE(STATUS "ENV LIBUV_DIR is $ENV{LIBUV_DIR}")
+ELSE()
+  set(LIBUV_DIR ${CMAKE_CURRENT_LIST_DIR}/libuv)
+ENDIF()
+MESSAGE(STATUS "LIBUV_DIR is ${LIBUV_DIR}")
+
+IF(CMAKE_VERSION VERSION_GREATER 3)
+  cmake_policy(SET CMP0054 OLD)
+ENDIF()
 
 include_directories(
-  ${LIBUVDIR}/src
-  ${LIBUVDIR}/include
+  ${LIBUV_DIR}/src
+  ${LIBUV_DIR}/include
 )
 
 set(SOURCES
-  ${LIBUVDIR}/include/uv.h
-  ${LIBUVDIR}/include/tree.h
-  ${LIBUVDIR}/include/uv-errno.h
-  ${LIBUVDIR}/include/uv-threadpool.h
-  ${LIBUVDIR}/include/uv-version.h
-  ${LIBUVDIR}/src/fs-poll.c
-  ${LIBUVDIR}/src/heap-inl.h
-  ${LIBUVDIR}/src/inet.c
-  ${LIBUVDIR}/src/queue.h
-  ${LIBUVDIR}/src/threadpool.c
-  ${LIBUVDIR}/src/uv-common.c
-  ${LIBUVDIR}/src/uv-common.h
-  ${LIBUVDIR}/src/version.c
+  ${LIBUV_DIR}/include/uv.h
+  ${LIBUV_DIR}/include/tree.h
+  ${LIBUV_DIR}/include/uv-errno.h
+  ${LIBUV_DIR}/include/uv-threadpool.h
+  ${LIBUV_DIR}/include/uv-version.h
+  ${LIBUV_DIR}/src/fs-poll.c
+  ${LIBUV_DIR}/src/heap-inl.h
+  ${LIBUV_DIR}/src/inet.c
+  ${LIBUV_DIR}/src/queue.h
+  ${LIBUV_DIR}/src/threadpool.c
+  ${LIBUV_DIR}/src/uv-common.c
+  ${LIBUV_DIR}/src/uv-common.h
+  ${LIBUV_DIR}/src/version.c
 )
 
-if(WIN32)
+if(WIN32 OR MSYS)
   add_definitions(
     -D_WIN32_WINNT=0x0600
     -D_CRT_SECURE_NO_WARNINGS
     -D_GNU_SOURCE
   )
   set(SOURCES ${SOURCES}
-    ${LIBUVDIR}/include/uv-win.h
-    ${LIBUVDIR}/src/win/async.c
-    ${LIBUVDIR}/src/win/atomicops-inl.h
-    ${LIBUVDIR}/src/win/core.c
-    ${LIBUVDIR}/src/win/detect-wakeup.c
-    ${LIBUVDIR}/src/win/device.c
-    ${LIBUVDIR}/src/win/dl.c
-    ${LIBUVDIR}/src/win/error.c
-    ${LIBUVDIR}/src/win/fs-event.c
-    ${LIBUVDIR}/src/win/fs.c
-    ${LIBUVDIR}/src/win/getaddrinfo.c
-    ${LIBUVDIR}/src/win/getnameinfo.c
-    ${LIBUVDIR}/src/win/handle-inl.h
-    ${LIBUVDIR}/src/win/handle.c
-    ${LIBUVDIR}/src/win/internal.h
-    ${LIBUVDIR}/src/win/loop-watcher.c
-    ${LIBUVDIR}/src/win/pipe.c
-    ${LIBUVDIR}/src/win/poll.c
-    ${LIBUVDIR}/src/win/process-stdio.c
-    ${LIBUVDIR}/src/win/process.c
-    ${LIBUVDIR}/src/win/req-inl.h
-    ${LIBUVDIR}/src/win/req.c
-    ${LIBUVDIR}/src/win/signal.c
-    ${LIBUVDIR}/src/win/snprintf.c
-    ${LIBUVDIR}/src/win/stream-inl.h
-    ${LIBUVDIR}/src/win/stream.c
-    ${LIBUVDIR}/src/win/tcp.c
-    ${LIBUVDIR}/src/win/thread.c
-    ${LIBUVDIR}/src/win/timer.c
-    ${LIBUVDIR}/src/win/tty.c
-    ${LIBUVDIR}/src/win/udp.c
-    ${LIBUVDIR}/src/win/util.c
-    ${LIBUVDIR}/src/win/winapi.c
-    ${LIBUVDIR}/src/win/winapi.h
-    ${LIBUVDIR}/src/win/winsock.c
-    ${LIBUVDIR}/src/win/winsock.h
+    ${LIBUV_DIR}/include/uv-win.h
+    ${LIBUV_DIR}/src/win/async.c
+    ${LIBUV_DIR}/src/win/atomicops-inl.h
+    ${LIBUV_DIR}/src/win/core.c
+    ${LIBUV_DIR}/src/win/detect-wakeup.c
+    ${LIBUV_DIR}/src/win/device.c
+    ${LIBUV_DIR}/src/win/dl.c
+    ${LIBUV_DIR}/src/win/error.c
+    ${LIBUV_DIR}/src/win/fs-event.c
+    ${LIBUV_DIR}/src/win/fs.c
+    ${LIBUV_DIR}/src/win/getaddrinfo.c
+    ${LIBUV_DIR}/src/win/getnameinfo.c
+    ${LIBUV_DIR}/src/win/handle-inl.h
+    ${LIBUV_DIR}/src/win/handle.c
+    ${LIBUV_DIR}/src/win/internal.h
+    ${LIBUV_DIR}/src/win/loop-watcher.c
+    ${LIBUV_DIR}/src/win/pipe.c
+    ${LIBUV_DIR}/src/win/poll.c
+    ${LIBUV_DIR}/src/win/process-stdio.c
+    ${LIBUV_DIR}/src/win/process.c
+    ${LIBUV_DIR}/src/win/req-inl.h
+    ${LIBUV_DIR}/src/win/req.c
+    ${LIBUV_DIR}/src/win/signal.c
+    ${LIBUV_DIR}/src/win/snprintf.c
+    ${LIBUV_DIR}/src/win/stream-inl.h
+    ${LIBUV_DIR}/src/win/stream.c
+    ${LIBUV_DIR}/src/win/tcp.c
+    ${LIBUV_DIR}/src/win/thread.c
+    ${LIBUV_DIR}/src/win/timer.c
+    ${LIBUV_DIR}/src/win/tty.c
+    ${LIBUV_DIR}/src/win/udp.c
+    ${LIBUV_DIR}/src/win/util.c
+    ${LIBUV_DIR}/src/win/winapi.c
+    ${LIBUV_DIR}/src/win/winapi.h
+    ${LIBUV_DIR}/src/win/winsock.c
+    ${LIBUV_DIR}/src/win/winsock.h
   )
 else()
-  include_directories(${LIBUVDIR}/src/unix)
+  include_directories(${LIBUV_DIR}/src/unix)
   set(SOURCES ${SOURCES}
-    ${LIBUVDIR}/include/uv-unix.h
-    ${LIBUVDIR}/include/uv-linux.h
-    ${LIBUVDIR}/include/uv-sunos.h
-    ${LIBUVDIR}/include/uv-bsd.h
-    ${LIBUVDIR}/include/uv-aix.h
-    ${LIBUVDIR}/src/unix/async.c
-    ${LIBUVDIR}/src/unix/atomic-ops.h
-    ${LIBUVDIR}/src/unix/core.c
-    ${LIBUVDIR}/src/unix/device.c
-    ${LIBUVDIR}/src/unix/dl.c
-    ${LIBUVDIR}/src/unix/fs.c
-    ${LIBUVDIR}/src/unix/getaddrinfo.c
-    ${LIBUVDIR}/src/unix/getnameinfo.c
-    ${LIBUVDIR}/src/unix/internal.h
-    ${LIBUVDIR}/src/unix/loop-watcher.c
-    ${LIBUVDIR}/src/unix/loop.c
-    ${LIBUVDIR}/src/unix/pipe.c
-    ${LIBUVDIR}/src/unix/poll.c
-    ${LIBUVDIR}/src/unix/process.c
-    ${LIBUVDIR}/src/unix/proctitle.c
-    ${LIBUVDIR}/src/unix/signal.c
-    ${LIBUVDIR}/src/unix/spinlock.h
-    ${LIBUVDIR}/src/unix/stream.c
-    ${LIBUVDIR}/src/unix/tcp.c
-    ${LIBUVDIR}/src/unix/thread.c
-    ${LIBUVDIR}/src/unix/timer.c
-    ${LIBUVDIR}/src/unix/tty.c
-    ${LIBUVDIR}/src/unix/udp.c
+    ${LIBUV_DIR}/include/uv-unix.h
+    ${LIBUV_DIR}/include/uv-linux.h
+    ${LIBUV_DIR}/include/uv-sunos.h
+    ${LIBUV_DIR}/include/uv-bsd.h
+    ${LIBUV_DIR}/include/uv-aix.h
+    ${LIBUV_DIR}/src/unix/async.c
+    ${LIBUV_DIR}/src/unix/atomic-ops.h
+    ${LIBUV_DIR}/src/unix/core.c
+    ${LIBUV_DIR}/src/unix/device.c
+    ${LIBUV_DIR}/src/unix/dl.c
+    ${LIBUV_DIR}/src/unix/fs.c
+    ${LIBUV_DIR}/src/unix/getaddrinfo.c
+    ${LIBUV_DIR}/src/unix/getnameinfo.c
+    ${LIBUV_DIR}/src/unix/internal.h
+    ${LIBUV_DIR}/src/unix/loop-watcher.c
+    ${LIBUV_DIR}/src/unix/loop.c
+    ${LIBUV_DIR}/src/unix/pipe.c
+    ${LIBUV_DIR}/src/unix/poll.c
+    ${LIBUV_DIR}/src/unix/process.c
+    ${LIBUV_DIR}/src/unix/proctitle.c
+    ${LIBUV_DIR}/src/unix/signal.c
+    ${LIBUV_DIR}/src/unix/spinlock.h
+    ${LIBUV_DIR}/src/unix/stream.c
+    ${LIBUV_DIR}/src/unix/tcp.c
+    ${LIBUV_DIR}/src/unix/thread.c
+    ${LIBUV_DIR}/src/unix/timer.c
+    ${LIBUV_DIR}/src/unix/tty.c
+    ${LIBUV_DIR}/src/unix/udp.c
   )
 endif()
 
@@ -136,16 +148,16 @@ endif()
 ## Freebsd
 if("${CMAKE_SYSTEM_NAME}" MATCHES "FreeBSD")
   set(SOURCES ${SOURCES}
-    ${LIBUVDIR}/src/unix/kqueue.c
-    ${LIBUVDIR}/src/unix/freebsd.c
+    ${LIBUV_DIR}/src/unix/kqueue.c
+    ${LIBUV_DIR}/src/unix/freebsd.c
   )
 endif()
 
 ## OpenBSD
 if("${CMAKE_SYSTEM_NAME}" MATCHES "OpenBSD")
   set(SOURCES ${SOURCES}
-    ${LIBUVDIR}/src/unix/kqueue.c
-    ${LIBUVDIR}/src/unix/openbsd.c
+    ${LIBUV_DIR}/src/unix/kqueue.c
+    ${LIBUV_DIR}/src/unix/openbsd.c
   )
 endif()
 
@@ -155,14 +167,14 @@ if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
     -D_GNU_SOURCE
   )
   set(SOURCES ${SOURCES}
-    ${LIBUVDIR}/src/unix/proctitle.c
-    ${LIBUVDIR}/src/unix/linux-core.c
-    ${LIBUVDIR}/src/unix/linux-inotify.c
-    ${LIBUVDIR}/src/unix/linux-syscalls.c
-    ${LIBUVDIR}/src/unix/linux-syscalls.h
-    ${LIBUVDIR}/src/unix/procfs-exepath.c
-    ${LIBUVDIR}/src/unix/sysinfo-loadavg.c
-    ${LIBUVDIR}/src/unix/sysinfo-memory.c
+    ${LIBUV_DIR}/src/unix/proctitle.c
+    ${LIBUV_DIR}/src/unix/linux-core.c
+    ${LIBUV_DIR}/src/unix/linux-inotify.c
+    ${LIBUV_DIR}/src/unix/linux-syscalls.c
+    ${LIBUV_DIR}/src/unix/linux-syscalls.h
+    ${LIBUV_DIR}/src/unix/procfs-exepath.c
+    ${LIBUV_DIR}/src/unix/sysinfo-loadavg.c
+    ${LIBUV_DIR}/src/unix/sysinfo-memory.c
   )
 endif()
 
@@ -173,7 +185,7 @@ if("${CMAKE_SYSTEM_NAME}" MATCHES "SunOS")
     -D_XOPEN_SOURCE=500
   )
   set(SOURCES ${SOURCES}
-    ${LIBUVDIR}/src/unix/sunos.c
+    ${LIBUV_DIR}/src/unix/sunos.c
   )
 endif()
 
@@ -183,12 +195,12 @@ if(APPLE)
     -D=_DARWIN_USE_64_BIT_INODE
   )
   set(SOURCES ${SOURCES}
-    ${LIBUVDIR}/include/uv-darwin.h
-    ${LIBUVDIR}/src/unix/bsd-ifaddrs.c
-    ${LIBUVDIR}/src/unix/darwin.c
-    ${LIBUVDIR}/src/unix/darwin-proctitle.c
-    ${LIBUVDIR}/src/unix/fsevents.c
-    ${LIBUVDIR}/src/unix/kqueue.c
+    ${LIBUV_DIR}/include/uv-darwin.h
+    ${LIBUV_DIR}/src/unix/bsd-ifaddrs.c
+    ${LIBUV_DIR}/src/unix/darwin.c
+    ${LIBUV_DIR}/src/unix/darwin-proctitle.c
+    ${LIBUV_DIR}/src/unix/fsevents.c
+    ${LIBUV_DIR}/src/unix/kqueue.c
   )
 endif()
 
@@ -222,6 +234,15 @@ if(WIN32)
     iphlpapi.lib
     advapi32.lib
     userenv.lib
+  )
+elseif (MSYS)
+  target_link_libraries(uv
+    ws2_32
+    shell32
+    psapi
+    iphlpapi
+    advapi32
+    userenv
   )
 endif()
 
