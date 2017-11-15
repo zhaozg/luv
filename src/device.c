@@ -44,10 +44,10 @@ static int luv_device_ioctl(lua_State* L) {
   int ret;
 #ifdef WIN32
   if (!lua_isnoneornil(L, 3)) {
-    args.input = (void*)luaL_checklstring(L, 3, &args.input_len);
+    args.input = (void*)luaL_checklstring(L, 3, (size_t*)&args.input_len);
   }
   if (!lua_isnoneornil(L, 4)) {
-    args.output = (void*)luaL_checklstring(L, 4, &args.output_len);
+    args.output = (void*)luaL_checklstring(L, 4, (size_t*)&args.output_len);
   }
 #else
   if (lua_isnumber(L, 3)) {
