@@ -62,7 +62,7 @@ set(SOURCES
   ${LIBUV_DIR}/src/version.c
 )
 
-if(WIN32 OR MSYS)
+if(WIN32 OR MINGW)
   add_definitions(
     -D_WIN32_WINNT=0x0600
     -D_CRT_SECURE_NO_WARNINGS
@@ -227,6 +227,7 @@ if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
 endif()
 
 if(WIN32)
+  if (MSVC)
   target_link_libraries(uv
     ws2_32.lib
     shell32.lib
@@ -235,7 +236,7 @@ if(WIN32)
     advapi32.lib
     userenv.lib
   )
-elseif (MSYS)
+  elseif (MINGW)
   target_link_libraries(uv
     ws2_32
     shell32
@@ -244,6 +245,7 @@ elseif (MSYS)
     advapi32
     userenv
   )
+  endif()
 endif()
 
 if("${CMAKE_SYSTEM_NAME}" MATCHES "SunOS")
