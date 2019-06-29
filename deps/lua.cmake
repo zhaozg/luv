@@ -8,14 +8,20 @@
 
 #project(Lua53 C)
 
-SET(LUA_DIR ${CMAKE_CURRENT_LIST_DIR}/lua CACHE PATH "location of lua sources")
+IF(DEFINED ENV{LUA_DIR})
+  SET(LUA_DIR $ENV{LUA_DIR})
+ELSE()
+  SET(LUA_DIR ${CMAKE_CURRENT_LIST_DIR}/lua CACHE PATH "location of lua sources")
+ENDIF()
+
+FILE(GLOB jit_files ${LUA_DIR}/../etc/*.lua)
+FILE(COPY ${jit_files} DESTINATION ${CMAKE_BINARY_DIR})
+FILE(COPY ${CMAKE_CURRENT_LIST_DIR}/luauser.h DESTINATION ${CMAKE_BINARY_DIR})
 
 SET(CMAKE_REQUIRED_INCLUDES
   ${LUA_DIR}
-  ${CMAKE_CURRENT_BINARY_DIR}
+  ${CMAKE_BINARY_DIR}
 )
-
-OPTION(WITH_AMALG "Build eveything in one shot (needs memory)" ON)
 
 # Ugly warnings
 IF(MSVC)
@@ -28,8 +34,7 @@ INCLUDE(CheckFunctionExists)
 INCLUDE(CheckCSourceCompiles)
 INCLUDE(CheckTypeSize)
 
-CHECK_TYPE_SIZE("void*" SIZEOF_VOID_P)
-IF(SIZEOF_VOID_P EQUAL 8)
+IF(CMAKE_SIZEOF_VOID_P EQUAL 8)
   ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE)
 ENDIF()
 
@@ -64,7 +69,8 @@ SET(SRC_LUALIB
   ${LUA_DIR}/loslib.c
   ${LUA_DIR}/lstrlib.c
   ${LUA_DIR}/ltablib.c
-  ${LUA_DIR}/lutf8lib.c)
+  ${LUA_DIR}/lutf8lib.c
+)
 
 SET(SRC_LUACORE
   ${LUA_DIR}/lauxlib.c
@@ -89,37 +95,60 @@ SET(SRC_LUACORE
   ${LUA_DIR}/lundump.c
   ${LUA_DIR}/lvm.c
   ${LUA_DIR}/lzio.c
-  ${SRC_LUALIB})
+  ${SRC_LUALIB}
+)
 
 ## GENERATE
+if(WITH_SHARED_LUA)
+  if(IOS OR ANDROID)
+    SET(LIBTYPE STATIC)
+  else()
+    SET(LIBTYPE SHARED)
+  endif()
+else()
+  SET(LIBTYPE STATIC)
+endif()
+add_library(lualib ${LIBTYPE} ${SRC_LUACORE} )
+set(LUA_COMPILE_DEFINITIONS)
+IF(ANDROID OR IOS)
+  list(APPEND LUA_COMPILE_DEFINITIONS LUA_USER_H="luauser.h" )
+ENDIF()
+IF(NOT WIN32)
+  list(APPEND LUA_COMPILE_DEFINITIONS "LUA_USE_POSIX" )
+ENDIF()
 
-IF(WITH_SHARED_LUA)
-  IF(WITH_AMALG)
-    add_library(lualib SHARED ${LUA_DIR}/../lua_one.c)
-  ELSE()
-    add_library(lualib SHARED ${SRC_LUACORE})
-  ENDIF()
-ELSE()
-  IF(WITH_AMALG)
-    add_library(lualib STATIC ${LUA_DIR}/../lua_one.c )
-  ELSE()
-    add_library(lualib STATIC ${SRC_LUACORE} )
-  ENDIF()
-  set_target_properties(lualib PROPERTIES
-    PREFIX "lib" IMPORT_PREFIX "lib")
+SET_TARGET_PROPERTIES(lualib PROPERTIES
+  PREFIX "lib"
+  IMPORT_PREFIX "lib"
+  COMPILE_DEFINITIONS "${LUA_COMPILE_DEFINITIONS}"
+)
+IF(LUA_COMPILE_FLAGS)
+  SET_TARGET_PROPERTIES(lualib PROPERTIES
+	COMPILE_FLAGS ${LUA_COMPILE_FLAGS}
+  )
 ENDIF()
 
 target_link_libraries (lualib ${LIBS} )
 set_target_properties (lualib PROPERTIES OUTPUT_NAME "lua53")
+list(APPEND LIB_LIST lualib)
 
 add_executable(lua ${LUA_DIR}/lua.c)
 IF(WIN32)
   target_link_libraries(lua lualib)
 ELSE()
   target_link_libraries(lua lualib ${LIBS})
-  SET_TARGET_PROPERTIES(lua PROPERTIES ENABLE_EXPORTS ON)
+  SET_TARGET_PROPERTIES(lua PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+    ENABLE_EXPORTS ON
+  )
 ENDIF(WIN32)
 
+SET(CMD lua)
+IF(CMAKE_CROSSCOMPILING)
+  SET(CMD lua32)
+ELSE()
+  SET(CMD ${CMAKE_BINARY_DIR}/lua)
+ENDIF()
 MACRO(LUA_add_custom_commands luajit_target)
   SET(target_srcs "")
   FOREACH(file ${ARGN})
@@ -140,11 +169,12 @@ MACRO(LUA_add_custom_commands luajit_target)
         OUTPUT ${generated_file}
         MAIN_DEPENDENCY ${source_file}
         DEPENDS lua
-        COMMAND lua
-        ARGS "${LUA_DIR}/../luac.lua"
+        COMMAND ${CMD}
+        ARGS "${CMAKE_BINARY_DIR}/luac.lua"
           ${source_file}
           ${generated_file}
-        COMMENT "Building Lua ${source_file}: ${generated_file}"
+          COMMENT "lua ${CMAKE_BINARY_DIR}/luac.lua ${source_file} ${generated_file}"
+          WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
       )
 
       get_filename_component(basedir ${generated_file} PATH)
@@ -161,6 +191,10 @@ MACRO(LUA_add_custom_commands luajit_target)
     ENDIF(${file} MATCHES ".*\\.lua$")
   ENDFOREACH(file)
 ENDMACRO()
+
+MACRO(LUA_ADD_CUSTOM luajit_target)
+  LUA_add_custom_commands(${luajit_target} ${ARGN})
+ENDMACRO(LUA_ADD_CUSTOM luajit_target)
 
 MACRO(LUA_ADD_EXECUTABLE luajit_target)
   LUA_add_custom_commands(${luajit_target} ${ARGN})
