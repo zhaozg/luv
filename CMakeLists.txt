@@ -4,7 +4,7 @@ if(POLICY CMP0053)
   cmake_policy(SET CMP0053 NEW) # faster evaluation of variable references
 endif()
 
-project (luv C ASM)
+project(luv C ASM)
 
 set(LUV_VERSION_MAJOR 1)
 set(LUV_VERSION_MINOR 30)
@@ -13,119 +13,130 @@ set(LUV_VERSION ${LUV_VERSION_MAJOR}.${LUV_VERSION_MINOR}.${LUV_VERSION_PATCH})
 
 option(BUILD_MODULE "Build as module" ON)
 option(BUILD_SHARED_LIBS "Build shared library" OFF)
-option(WITH_SHARED_LIBUV "Link to a shared libuv library instead of static linking" OFF)
+option(WITH_SHARED_LIBUV
+       "Link to a shared libuv library instead of static linking" OFF)
 
-if (MINGW)
+if(MINGW)
   add_definitions(-D_WIN32_WINNT=0x0600)
-endif (MINGW)
+endif(MINGW)
 
-if (WIN32)
-  # replace /MD to /MT to avoid link msvcr*.dll
-  # this needs to be before add_subdirectory calls so that they inherit the modified flags
+if(WIN32)
+  # replace /MD to /MT to avoid link msvcr*.dll this needs to be before
+  # add_subdirectory calls so that they inherit the modified flags
   set(CompilerFlags
-    CMAKE_C_FLAGS
-    CMAKE_C_FLAGS_DEBUG
-    CMAKE_C_FLAGS_MINSIZEREL
-    CMAKE_C_FLAGS_RELWITHDEBINFO
-    CMAKE_C_FLAGS_RELEASE)
+      CMAKE_C_FLAGS
+      CMAKE_C_FLAGS_DEBUG
+      CMAKE_C_FLAGS_MINSIZEREL
+      CMAKE_C_FLAGS_RELWITHDEBINFO
+      CMAKE_C_FLAGS_RELEASE)
   foreach(CompilerFlag ${CompilerFlags})
-    string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
+    string(REPLACE "/MD"
+                   "/MT"
+                   ${CompilerFlag}
+                   "${${CompilerFlag}}")
   endforeach()
-endif ()
+endif()
 
-if (NOT WITH_LUA_ENGINE)
-  set(WITH_LUA_ENGINE "LuaJIT"
-    CACHE STRING "Link to LuaJIT or PUC Lua" FORCE)
-  set_property(CACHE WITH_LUA_ENGINE
-    PROPERTY STRINGS  "Lua;LuaJIT")
-endif (NOT WITH_LUA_ENGINE)
+if(NOT WITH_LUA_ENGINE)
+  set(WITH_LUA_ENGINE "LuaJIT" CACHE STRING "Link to LuaJIT or PUC Lua" FORCE)
+  set_property(CACHE WITH_LUA_ENGINE PROPERTY STRINGS "Lua;LuaJIT")
+endif()
 
-if (NOT LUA_BUILD_TYPE)
+if(NOT LUA_BUILD_TYPE)
   set(LUA_BUILD_TYPE "Static"
-    CACHE STRING "Build Lua/LuaJIT as static, dynamic libary, or use system one" FORCE)
-  set_property(CACHE LUA_BUILD_TYPE
-    PROPERTY STRINGS  "Static;Dynamic;System")
-endif (NOT LUA_BUILD_TYPE)
+      CACHE STRING
+            "Build Lua/LuaJIT as static, dynamic libary, or use system one"
+      FORCE)
+  set_property(CACHE LUA_BUILD_TYPE PROPERTY STRINGS "Static;Dynamic;System")
+endif()
 
-if (WITH_LUA_ENGINE STREQUAL Lua)
-  if (NOT WIN32)
+if(WITH_LUA_ENGINE STREQUAL Lua)
+  if(NOT WIN32)
     add_definitions(-DLUA_USE_DLOPEN)
-  endif (NOT WIN32)
+  endif()
   set(USE_LUAJIT OFF)
-else ()
+else()
   set(USE_LUAJIT ON)
-endif ()
+endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
-if (WITH_SHARED_LIBUV)
+if(WITH_SHARED_LIBUV)
   find_package(Libuv REQUIRED)
   include_directories(${LIBUV_INCLUDE_DIR})
-else (WITH_SHARED_LIBUV)
+else()
   if(DEFINED ENV{LIBUV_DIR})
-    SET(LIBUV_DIR $ENV{LIBUV_DIR})
+    set(LIBUV_DIR $ENV{LIBUV_DIR})
   else()
-    SET(LIBUV_DIR deps/libuv)
+    set(LIBUV_DIR deps/libuv)
   endif()
   include_directories(${LIBUV_DIR}/include)
   add_subdirectory(${LIBUV_DIR} libuv EXCLUDE_FROM_ALL)
-  if (BUILD_MODULE)
-    add_definitions( -DBUILDING_UV_SHARED )
-  endif (BUILD_MODULE)
+  if(BUILD_MODULE)
+    add_definitions(-DBUILDING_UV_SHARED)
+  endif()
   set(LIBUV_LIBRARIES uv_a)
   set_target_properties(uv_a PROPERTIES COMPILE_FLAGS "-fPIC")
-endif (WITH_SHARED_LIBUV)
+endif()
 
-if (LUA)
-  MESSAGE(STATUS "Lua: using information from luarocks")
+if(LUA)
+  message(STATUS "Lua: using information from luarocks")
 
-  MESSAGE(STATUS "LUA_LIBDIR: " ${LUA_LIBDIR})
-  MESSAGE(STATUS "LUA_INCDIR: " ${LUA_INCDIR})
-  MESSAGE(STATUS "LUA: " ${LUA})
+  message(STATUS "LUA_LIBDIR: " ${LUA_LIBDIR})
+  message(STATUS "LUA_INCDIR: " ${LUA_INCDIR})
+  message(STATUS "LUA: " ${LUA})
 
-  SET(LUA_EXECUTABLE "${LUA}")
-  SET(LUA_INCLUDE_DIR "${LUA_INCDIR}")
-  SET(LUA_PACKAGE_PATH "${LUADIR}")
-  SET(LUA_PACKAGE_CPATH "${LIBDIR}")
+  set(LUA_EXECUTABLE "${LUA}")
+  set(LUA_INCLUDE_DIR "${LUA_INCDIR}")
+  set(LUA_PACKAGE_PATH "${LUADIR}")
+  set(LUA_PACKAGE_CPATH "${LIBDIR}")
 
-  SET(INSTALL_LIB_DIR ${LIBDIR})
+  set(INSTALL_LIB_DIR ${LIBDIR})
 
-  GET_FILENAME_COMPONENT(LUA_EXEC_NAME ${LUA_EXECUTABLE} NAME_WE)
-  IF(LUA_EXEC_NAME STREQUAL "luajit")
-  FIND_LIBRARY(LUA_LIBRARIES
-    NAMES luajit libluajit
-    PATHS ${LUA_LIBDIR}
-    NO_DEFAULT_PATH)
-  ELSEIF(LUA_EXEC_NAME MATCHES "lua.*")
-    FIND_LIBRARY(LUA_LIBRARIES
-      NAMES lua lua53 lua52 lua51 liblua liblua53 liblua52 liblua51
-      PATHS ${LUA_LIBDIR}
-      NO_DEFAULT_PATH)
-  ENDIF()
-  MESSAGE(STATUS "Lua library: ${LUA_LIBRARIES}")
+  get_filename_component(LUA_EXEC_NAME ${LUA_EXECUTABLE} NAME_WE)
+  if(LUA_EXEC_NAME STREQUAL "luajit")
+    find_library(LUA_LIBRARIES
+                 NAMES luajit libluajit
+                 PATHS ${LUA_LIBDIR}
+                 NO_DEFAULT_PATH)
+  elseif(LUA_EXEC_NAME MATCHES "lua.*")
+    find_library(LUA_LIBRARIES
+                 NAMES lua
+                       lua53
+                       lua52
+                       lua51
+                       liblua
+                       liblua53
+                       liblua52
+                       liblua51
+                 PATHS ${LUA_LIBDIR}
+                 NO_DEFAULT_PATH)
+  endif()
+  message(STATUS "Lua library: ${LUA_LIBRARIES}")
 
   include_directories(${LUA_INCLUDE_DIR})
-else (LUA)
-  if (LUA_BUILD_TYPE STREQUAL System)
-    if (USE_LUAJIT)
+else()
+  if(LUA_BUILD_TYPE STREQUAL System)
+    if(USE_LUAJIT)
       find_package(LuaJIT REQUIRED)
       include_directories(${LUAJIT_INCLUDE_DIR})
       link_directories(${LUAJIT_LIBRARIES})
-    else (USE_LUAJIT)
+    else()
       find_package(Lua REQUIRED)
       include_directories(${LUA_INCLUDE_DIR})
-    endif (USE_LUAJIT)
-
-  else (LUA_BUILD_TYPE STREQUAL System)
-    if (LUA_BUILD_TYPE STREQUAL Static)
-      SET(WITH_SHARED_LUA OFF)
-    else (LUA_BUILD_TYPE STREQUAL Static)
-      SET(WITH_SHARED_LUA ON)
-    endif (LUA_BUILD_TYPE STREQUAL Static)
-    SET(LUA_FORGE_DIR deps/lua-forge)
-    IF(DEFINED ENV{LUA_FORGE_DIR})
+    endif()
+  else()
+    if(LUA_BUILD_TYPE STREQUAL Static)
+      set(WITH_SHARED_LUA OFF)
+    else()
+      set(WITH_SHARED_LUA ON)
+    endif()
+    if(DEFINED ENV{LUA_FORGE_DIR})
       set(LUA_FORGE_DIR $ENV{LUA_FORGE_DIR})
-    ENDIF()
+    endif()
+    if(NOT LUA_FORGE_DIR)
+      message(FATAL_ERROR "Please set LUA_FORGE_DIR")
+    endif()
 
     add_subdirectory(${LUA_FORGE_DIR} lua EXCLUDE_FROM_ALL)
     if(USE_LUAJIT)
@@ -133,28 +144,28 @@ else (LUA)
     else()
       include_directories(${LUA_FORGE_DIR}/lua)
     endif()
-  endif (LUA_BUILD_TYPE STREQUAL System)
-endif (LUA)
+  endif()
+endif()
 
-if (BUILD_MODULE)
+if(BUILD_MODULE)
   add_library(luv MODULE src/luv.c)
   set_target_properties(luv PROPERTIES PREFIX "")
-else (BUILD_MODULE)
+  if(NOT LUA_BUILD_TYPE STREQUAL System)
+    message("LUA_TARGET ${LUA_TARGET}")
+    add_dependencies(luv ${LUA_TARGET})
+  endif()
+else()
   add_library(luv src/luv.c)
-  if (BUILD_SHARED_LIBS)
-    set_target_properties(luv
-      PROPERTIES VERSION ${LUV_VERSION} SOVERSION ${LUV_VERSION_MAJOR})
-  endif (BUILD_SHARED_LIBS)
-endif (BUILD_MODULE)
+  if(BUILD_SHARED_LIBS)
+    set_target_properties(luv PROPERTIES
+      VERSION ${LUV_VERSION} SOVERSION ${LUV_VERSION_MAJOR})
+  endif()
+endif()
 
 if(APPLE)
-  set(CMAKE_SHARED_MODULE_CREATE_C_FLAGS
-    "${CMAKE_SHARED_MODULE_CREATE_C_FLAGS} -flat_namespace -undefined suppress"
-  )
-  # execute_process(COMMAND which luajit OUTPUT_VARIABLE LUAJIT)
-  # set(CMAKE_SHARED_MODULE_CREATE_C_FLAGS
-  #   "${CMAKE_SHARED_MODULE_CREATE_C_FLAGS} -bundle_loader ${LUAJIT}"
-  # )
+  set(
+    CMAKE_SHARED_MODULE_CREATE_C_FLAGS
+    "${CMAKE_SHARED_MODULE_CREATE_C_FLAGS} -flat_namespace -undefined suppress")
 endif()
 
 if(NOT LUA_COMPAT53_DIR)
@@ -167,57 +178,48 @@ include_directories(${LUA_COMPAT53_DIR})
 
 if(WIN32)
   add_definitions(-DLUA_BUILD_AS_DLL -DLUA_LIB)
-  if (LUA)
-    target_link_libraries(luv ${LIBUV_LIBRARIES} ${LUA_LIBRARIES})
-  else (LUA)
-    if (USE_LUAJIT)
-      target_link_libraries(luv ${LIBUV_LIBRARIES} ${LUAJIT_LIBRARIES})
-    else (USE_LUAJIT)
-      if (LUA_BUILD_TYPE STREQUAL System)
-          target_link_libraries(luv ${LIBUV_LIBRARIES} ${LUA_LIBRARIES})
-      else (LUA_BUILD_TYPE STREQUAL System)
-          target_link_libraries(luv ${LIBUV_LIBRARIES} lualib)
-      endif (LUA_BUILD_TYPE STREQUAL System)
-    endif (USE_LUAJIT)
-  endif (LUA)
+  target_link_libraries(luv ${LIBUV_LIBRARIES} ${LUA_LIBRARIES})
 elseif("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
   target_link_libraries(luv ${LIBUV_LIBRARIES} rt)
 else()
   target_link_libraries(luv ${LIBUV_LIBRARIES})
 endif()
 
-if (NOT LUA)
-  if (BUILD_MODULE)
-    if (WIN32)
+if(NOT LUA)
+  if(BUILD_MODULE)
+    if(WIN32)
       set(INSTALL_LIB_DIR "${CMAKE_INSTALL_PREFIX}/lib")
-    else (WIN32)
-      set(INSTALL_LIB_DIR "${CMAKE_INSTALL_PREFIX}/lib/lua/${LUA_VERSION_MAJOR}.${LUA_VERSION_MINOR}")
-    endif (WIN32)
-  else (BUILD_MODULE)
+    else()
+      set(
+        INSTALL_LIB_DIR
+        "${CMAKE_INSTALL_PREFIX}/lib/lua/${LUA_VERSION_MAJOR}.${LUA_VERSION_MINOR}"
+        )
+    endif()
+  else()
     set(INSTALL_LIB_DIR "${CMAKE_INSTALL_PREFIX}/lib"
-      CACHE PATH "Installation directory for libraries")
+        CACHE PATH "Installation directory for libraries")
     set(INSTALL_INC_DIR "${CMAKE_INSTALL_PREFIX}/include/luv"
-      CACHE PATH "Installation directory for headers")
-  endif (BUILD_MODULE)
-endif ()
+        CACHE PATH "Installation directory for headers")
+  endif()
+endif()
 
-if (CMAKE_INSTALL_PREFIX)
+if(CMAKE_INSTALL_PREFIX)
   install(TARGETS luv
-    ARCHIVE DESTINATION "${INSTALL_LIB_DIR}"
-    LIBRARY DESTINATION "${INSTALL_LIB_DIR}"
-  )
-  if (NOT BUILD_MODULE)
+          ARCHIVE DESTINATION "${INSTALL_LIB_DIR}"
+          LIBRARY DESTINATION "${INSTALL_LIB_DIR}")
+  if(NOT BUILD_MODULE)
     if(UNIX)
       set(prefix ${CMAKE_INSTALL_PREFIX})
       set(includedir ${INSTALL_INC_DIR})
       set(libdir ${INSTALL_LIB_DIR})
       configure_file(libluv.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libluv.pc @ONLY)
       install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libluv.pc
-        DESTINATION ${INSTALL_LIB_DIR}/pkgconfig)
+              DESTINATION ${INSTALL_LIB_DIR}/pkgconfig)
     endif()
-    install(
-      FILES src/luv.h src/util.h src/lhandle.h src/lreq.h
-      DESTINATION "${INSTALL_INC_DIR}"
-    )
-  endif (NOT BUILD_MODULE)
-endif (CMAKE_INSTALL_PREFIX)
+    install(FILES src/luv.h
+                  src/util.h
+                  src/lhandle.h
+                  src/lreq.h
+            DESTINATION "${INSTALL_INC_DIR}")
+  endif()
+endif()
