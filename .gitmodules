@@ -10,3 +10,6 @@
 [submodule "lua-compat-5.3"]
 	path = deps/lua-compat-5.3
 	url = https://github.com/keplerproject/lua-compat-5.3.git
+[submodule "deps/uv_callback"]
+	path = deps/uv_callback
+	url = https://github.com/litesync/uv_callback.git
