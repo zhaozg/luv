@@ -313,17 +313,23 @@ static int push_fs_result(lua_State* L, uv_fs_t* req) {
     }
     case UV_FS_READDIR:
     {
+      uv_dir_t *dir = (uv_dir_t*)req->ptr;
       if(req->result > 0) {
         size_t i;
-        uv_dir_t *dir = (uv_dir_t*)req->ptr;
         lua_newtable(L);
         for(i=0; i<req->result; i++)
         {
           luv_push_dirent(L, dir->dirents+i, 1);
           lua_rawseti(L, -2, i+1);
         }
-      } else
+      }
+      else
+      {
+        free(dir->dirents);
+        dir->dirents = NULL;
+        dir->nentries = 0;
         lua_pushnil(L);
+      }
 
       return 1;
     }
@@ -810,11 +816,6 @@ static int luv_fs_closedir(lua_State* L) {
   uv_dir_t* dir = luv_check_dir(L, 1);
   int ref = luv_check_continuation(L, 2);
   uv_fs_t *req = (uv_fs_t*)lua_newuserdata(L, sizeof(*req));
-  if(dir->dirents != NULL) {
-    free(dir->dirents);
-    dir->dirents = NULL;
-  }
-  dir->nentries = 0;
   req->data = luv_setup_req(L, ctx, ref);
   FS_CALL(closedir, req, dir);
 }
