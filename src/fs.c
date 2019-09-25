@@ -341,22 +341,12 @@ static int push_fs_result(lua_State* L, uv_fs_t* req) {
 
 }
 
-#if LUV_UV_VERSION_GEQ(1, 28, 0)
-#define LUV_FS_CLEANUP_REQ                      \
-  if (req->fs_type != UV_FS_SCANDIR &&          \
-      req->fs_type != UV_FS_OPENDIR) {          \
-    luv_cleanup_req(L, (luv_req_t*)req->data);  \
-    req->data = NULL;                           \
-    uv_fs_req_cleanup(req);                     \
-  }
-#else
 #define LUV_FS_CLEANUP_REQ                      \
   if (req->fs_type != UV_FS_SCANDIR) {          \
     luv_cleanup_req(L, (luv_req_t*)req->data);  \
     req->data = NULL;                           \
     uv_fs_req_cleanup(req);                     \
   }
-#endif
 
 static void luv_fs_cb(uv_fs_t* req) {
   luv_req_t* data = (luv_req_t*)req->data;
