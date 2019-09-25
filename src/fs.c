@@ -324,12 +324,7 @@ static int push_fs_result(lua_State* L, uv_fs_t* req) {
         }
       }
       else
-      {
-        free(dir->dirents);
-        dir->dirents = NULL;
-        dir->nentries = 0;
         lua_pushnil(L);
-      }
 
       return 1;
     }
