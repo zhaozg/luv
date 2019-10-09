@@ -206,12 +206,6 @@ static void luv_push_statfs_table(lua_State* L, const uv_statfs_t* s) {
   lua_setfield(L, -2, "files");
   lua_pushinteger(L, s->f_ffree);
   lua_setfield(L, -2, "ffree");
-  lua_createtable(L, 4, 0);
-  for(i=0; i<4; i++) {
-    lua_pushinteger(L, s->f_spare[i]);
-    lua_rawseti(L, -2, i+1);
-  }
-  lua_setfield(L, -2, "spare");
 };
 #endif
 
@@ -294,8 +288,7 @@ static int push_fs_result(lua_State* L, uv_fs_t* req) {
       return 1;
 
 #if LUV_UV_VERSION_GEQ(1, 28, 0)
-    case UV_FS_OPENDIR:
-    {
+    case UV_FS_OPENDIR: {
       int nentries;
       uv_dir_t* dir = (uv_dir_t*)req->ptr;
 
@@ -315,14 +308,12 @@ static int push_fs_result(lua_State* L, uv_fs_t* req) {
 
       return 1;
     }
-    case UV_FS_READDIR:
-    {
+    case UV_FS_READDIR: {
       uv_dir_t *dir = (uv_dir_t*)req->ptr;
       if(req->result > 0) {
         size_t i;
         lua_newtable(L);
-        for(i=0; i<req->result; i++)
-        {
+        for(i=0; i<req->result; i++) {
           luv_push_dirent(L, dir->dirents+i, 1);
           lua_rawseti(L, -2, i+1);
         }
@@ -345,13 +336,6 @@ static int push_fs_result(lua_State* L, uv_fs_t* req) {
 
 }
 
-#define LUV_FS_CLEANUP_REQ                      \
-  if (req->fs_type != UV_FS_SCANDIR) {          \
-    luv_cleanup_req(L, (luv_req_t*)req->data);  \
-    req->data = NULL;                           \
-    uv_fs_req_cleanup(req);                     \
-  }
-
 static void luv_fs_cb(uv_fs_t* req) {
   luv_req_t* data = (luv_req_t*)req->data;
   lua_State* L = data->ctx->L;
@@ -368,8 +352,18 @@ static void luv_fs_cb(uv_fs_t* req) {
     lua_insert(L, -nargs - 1);
     nargs++;
   }
-  luv_fulfill_req(L, (luv_req_t*)req->data, nargs);
-  LUV_FS_CLEANUP_REQ
+  if (req->fs_type == UV_FS_SCANDIR) {
+    luv_fulfill_req(L, data, nargs);
+  }
+  else {
+    // cleanup the uv_fs_t before the callback is called to avoid
+    // a race condition when fs_close is called from within
+    // a fs_readdir callback, see https://github.com/luvit/luv/issues/384
+    uv_fs_req_cleanup(req);
+    req->data = NULL;
+    luv_fulfill_req(L, data, nargs);
+    luv_cleanup_req(L, data);
+  }
 }
 
 #define FS_CALL(func, req, ...) {                         \
@@ -391,14 +385,18 @@ static void luv_fs_cb(uv_fs_t* req) {
           uv_strerror(req->result));                      \
     }                                                     \
     lua_pushstring(L, uv_err_name(req->result));          \
-    luv_cleanup_req(L, (luv_req_t*)req->data);            \
+    luv_cleanup_req(L, data);                             \
     req->data = NULL;                                     \
     uv_fs_req_cleanup(req);                               \
     return 3;                                             \
   }                                                       \
   if (sync) {                                             \
     int nargs = push_fs_result(L, req);                   \
-    LUV_FS_CLEANUP_REQ                                    \
+    if(req->fs_type != UV_FS_SCANDIR) {                   \
+      luv_cleanup_req(L, data);                           \
+      req->data = NULL;                                   \
+      uv_fs_req_cleanup(req);                             \
+    }                                                     \
     return nargs;                                         \
   }                                                       \
   lua_rawgeti(L, LUA_REGISTRYINDEX, data->req_ref);       \
