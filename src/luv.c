@@ -135,6 +135,9 @@ static const luaL_Reg luv_functions[] = {
   {"is_readable", luv_is_readable},
   {"is_writable", luv_is_writable},
   {"stream_set_blocking", luv_stream_set_blocking},
+#if LUV_UV_VERSION_GEQ(1, 19, 0)
+  {"stream_get_write_queue_size", luv_stream_get_write_queue_size},
+#endif
 
   // tcp.c
   {"new_tcp", luv_new_tcp},
@@ -232,6 +235,9 @@ static const luaL_Reg luv_functions[] = {
   {"fs_realpath", luv_fs_realpath},
   {"fs_chown", luv_fs_chown},
   {"fs_fchown", luv_fs_fchown},
+#if LUV_UV_VERSION_GEQ(1, 21, 0)
+  {"fs_lchown", luv_fs_lchown},
+#endif
 #if LUV_UV_VERSION_GEQ(1, 14, 0)
   {"fs_copyfile", luv_fs_copyfile },
 #endif
@@ -387,6 +393,9 @@ static const luaL_Reg luv_stream_methods[] = {
   {"is_readable", luv_is_readable},
   {"is_writable", luv_is_writable},
   {"set_blocking", luv_stream_set_blocking},
+#if LUV_UV_VERSION_GEQ(1, 19, 0)
+  {"get_write_queue_size", luv_stream_get_write_queue_size},
+#endif
   {NULL, NULL}
 };
 
