@@ -177,7 +177,7 @@ if(APPLE)
 endif()
 
 if(NOT LUA_COMPAT53_DIR)
-  set(LUA_COMPAT53_DIR deps/lua-compat-5.3/c-api)
+  set(LUA_COMPAT53_DIR deps/lua-compat-5.3)
 endif()
 if(DEFINED ENV{LUA_COMPAT53_DIR})
   set(LUA_COMPAT53_DIR $ENV{LUA_COMPAT53_DIR})
