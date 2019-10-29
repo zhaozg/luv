@@ -144,7 +144,7 @@ static int luv_sig_string_to_num(const char* string);
 static const char* luv_sig_num_to_string(const int num);
 
 /* from util.c */
-static int luv_optboolean(lua_State*L, int idx, int val);
+static int luv_optboolean(lua_State*L, int idx, int defaultval);
 #endif
 
 typedef lua_State* (*luv_acquire_vm)();
