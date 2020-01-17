@@ -11,6 +11,8 @@ addons:
 env:
   global:
     - LUAROCKS=2.3.0
+    # For LuaJIT 2.1, see https://github.com/LuaJIT/LuaJIT/commit/8961a92dd1607108760694af3486b4434602f8be
+    - MACOSX_DEPLOYMENT_TARGET=10.12
   matrix:
     - WITH_LUA_ENGINE=Lua LUA=lua5.3
     - WITH_LUA_ENGINE=LuaJIT LUA=luajit2.1
@@ -60,11 +62,10 @@ jobs:
         - CMAKE_OPTIONS="-DCMAKE_C_FLAGS=-fsanitize=address,undefined" make && make test
     - name: valgrind
       os: linux
+      # Need a more up-to-date Valgrind to dodge https://bugs.kde.org/show_bug.cgi?id=381289
+      dist: bionic
       addons:
         apt:
-          sources:
-            # Need a more up-to-date Valgrind to dodge https://bugs.kde.org/show_bug.cgi?id=381289
-            - sourceline: 'ppa:jonathonf/development-tools'
           packages:
             - valgrind
       env:
