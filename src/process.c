@@ -14,7 +14,7 @@
  *  limitations under the License.
  *
  */
-#include "luv.h"
+#include "private.h"
 #include <math.h>
 #ifndef _WIN32
 #include <sys/wait.h>
