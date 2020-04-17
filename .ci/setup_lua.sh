@@ -61,13 +61,13 @@ if [ "$LUAJIT" == "yes" ]; then
 else
 
   if [ "$LUA" == "lua5.1" ]; then
-    curl --silent http://www.lua.org/ftp/lua-5.1.5.tar.gz | tar xz
+    curl --silent https://www.lua.org/ftp/lua-5.1.5.tar.gz | tar xz
     cd lua-5.1.5;
   elif [ "$LUA" == "lua5.2" ]; then
-    curl --silent http://www.lua.org/ftp/lua-5.2.4.tar.gz | tar xz
+    curl --silent https://www.lua.org/ftp/lua-5.2.4.tar.gz | tar xz
     cd lua-5.2.4;
   elif [ "$LUA" == "lua5.3" ]; then
-    curl --silent http://www.lua.org/ftp/lua-5.3.2.tar.gz | tar xz
+    curl --silent https://www.lua.org/ftp/lua-5.3.2.tar.gz | tar xz
     cd lua-5.3.2;
   fi
 
@@ -87,7 +87,8 @@ lua -v
 
 LUAROCKS_BASE=luarocks-$LUAROCKS
 
-curl --silent --location "http://luarocks.org/releases/$LUAROCKS_BASE.tar.gz" | tar xz
+# retry 5 times, connection to luarocks.org seems to timeout occassionally
+curl --silent --location --retry 5 "https://luarocks.org/releases/$LUAROCKS_BASE.tar.gz" | tar xz
 
 cd "$LUAROCKS_BASE"
 
