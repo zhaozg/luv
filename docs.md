@@ -200,6 +200,34 @@ specified mode:
 you use the luv bindings directly, you need to call this after registering
 your initial set of event callbacks to start the event loop.
 
+### `uv.loop_configure(option, ...)`
+
+**Parameters:**
+- `option`: `string`
+- `...`: depends on `option`, see below
+
+Set additional loop options. You should normally call this before the first call
+to uv_run() unless mentioned otherwise.
+
+Supported options:
+
+  - `"block_signal"`: Block a signal when polling for new events. The second argument
+  to loop_configure() is the signal name (as a lowercase string) or the signal number.
+  This operation is currently only implemented for `"sigprof"` signals, to suppress
+  unnecessary wakeups when using a sampling profiler. Requesting other signals will
+  fail with `EINVAL`.
+
+An example of a valid call to this function is:
+
+```lua
+uv.loop_configure("block_signal", "sigprof")
+```
+
+**Returns:** `0` or `fail`
+
+**Note:** Be prepared to handle the `ENOSYS` error; it means the loop option is
+not supported by the platform.
+
 ### `uv.loop_alive()`
 
 Returns `true` if there are referenced active handles, active requests, or
@@ -284,6 +312,8 @@ end)
 
 ### `uv.cancel(req)`
 
+> method form `req:cancel()`
+
 **Parameters:**
 - `req`: `userdata` for sub-type of `uv_req_t`
 
@@ -292,6 +322,18 @@ executing. Only cancellation of `uv_fs_t`, `uv_getaddrinfo_t`,
 `uv_getnameinfo_t` and `uv_work_t` requests is currently supported.
 
 **Returns:** `0` or `fail`
+
+### `uv.req_get_type(req)`
+
+> method form `req:get_type()`
+
+**Parameters:**
+- `req`: `userdata` for sub-type of `uv_req_t`
+
+Returns the name of the struct for a given request (e.g. `"fs"` for `uv_fs_t`)
+and the libuv enum integer for the request's type (`uv_req_type`).
+
+**Returns:** `string, integer`
 
 ## `uv_handle_t` — Base handle
 
@@ -465,6 +507,18 @@ has been closed, this function will return `EBADF`.
 
 **Warning**: Be very careful when using this function. libuv assumes it's in
 control of the file descriptor so any change to it may lead to malfunction.
+
+### `uv.handle_get_type(handle)`
+
+> method form `handle:get_type()`
+
+**Parameters:**
+- `handle`: `userdata` for sub-type of `uv_handle_t`
+
+Returns the name of the struct for a given handle (e.g. `"pipe"` for `uv_pipe_t`)
+and the libuv enum integer for the handle's type (`uv_handle_type`).
+
+**Returns:** `string, integer`
 
 ## Reference counting
 
@@ -1134,6 +1188,17 @@ Sends the specified signal to the given PID. Check the documentation on
 
 **Returns:** `0` or `fail`
 
+### `uv.process_get_pid(process)`
+
+> method form `process:get_pid()`
+
+**Parameters:**
+- `process`: `uv_process_t userdata`
+
+Returns the handle's pid.
+
+**Returns:** `integer`
+
 ## `uv_stream_t` — Stream handle
 
 [`uv_stream_t`]: #uv_stream_t--stream-handle
@@ -1663,6 +1728,20 @@ the given type, returned by `uv.pipe_pending_type()` and call
 
 **Returns:** `string`
 
+### `uv.pipe_chmod(pipe, flags)`
+
+> method form `pipe:chmod(flags)`
+
+**Parameters:**
+- `pipe`: `uv_pipe_t userdata`
+- `flags`: `string`
+
+Alters pipe permissions, allowing it to be accessed from processes run by different users.
+Makes the pipe writable or readable by all users. `flags` are: `"r"`, `"w"`, `"rw"`, or `"wr"`
+where `r` is `READABLE` and `w` is `WRITABLE`. This function is blocking.
+
+**Returns:** `0` or `fail`
+
 ## `uv_tty_t` — TTY handle
 
 [`uv_tty_t`]: #uv_tty_t--tty-handle
@@ -1884,12 +1963,29 @@ Get the remote IP and port of the UDP handle on connected UDP handles.
 **Parameters:**
 - `udp`: `uv_udp_t userdata`
 - `multicast_addr`: `string`
-- `interface_addr`: `string`
+- `interface_addr`: `string` or `nil`
 - `membership`: `string`
 
 Set membership for a multicast address. `multicast_addr` is multicast address to
 set membership for. `interface_addr` is interface address. `membership` can be
 the string `"leave"` or `"join"`.
+
+**Returns:** `0` or `fail`
+
+### `uv.udp_set_source_membership(udp, multicast_addr, interface_addr, source_addr, membership)`
+
+> method form `udp:set_source_membership(multicast_addr, interface_addr, source_addr, membership)`
+
+**Parameters:**
+- `udp`: `uv_udp_t userdata`
+- `multicast_addr`: `string`
+- `interface_addr`: `string` or `nil`
+- `source_addr`: `string`
+- `membership`: `string`
+
+Set membership for a source-specific multicast group. `multicast_addr` is multicast
+address to set membership for. `interface_addr` is interface address. `source_addr`
+is source address. `membership` can be the string `"leave"` or `"join"`.
 
 **Returns:** `0` or `fail`
 
@@ -2234,17 +2330,21 @@ Equivalent to `open(2)`. Access `flags` may be an integer or one of: `"r"`,
 opened in binary mode. Because of this, the `O_BINARY` and `O_TEXT` flags are
 not supported.
 
-### `uv.fs_read(fd, size, offset, [callback])`
+### `uv.fs_read(fd, size, [offset], [callback])`
 
 **Parameters:**
 - `fd`: `integer`
 - `size`: `integer`
-- `offset`: `integer`
+- `offset`: `integer` or `nil`
 - `callback`: `callable` (async version) or `nil` (sync version)
   - `err`: `nil` or `string`
   - `data`: `string` or `nil`
 
 Equivalent to `preadv(2)`. Returns any data. An empty string indicates EOF.
+
+If `offset` is nil or omitted, it will default to `-1`, which indicates 'use and update the current file offset.'
+
+**Note:** When `offset` is >= 0, the current file offset will not be updated by the read.
 
 **Returns (sync version):** `string` or `fail`
 
@@ -2264,17 +2364,21 @@ Equivalent to `unlink(2)`.
 
 **Returns (async version):** `uv_fs_t userdata`
 
-### `uv.fs_write(fd, data, offset, [callback])`
+### `uv.fs_write(fd, data, [offset], [callback])`
 
 **Parameters:**
 - `fd`: `integer`
 - `data`: `buffer`
-- `offset`: `integer`
+- `offset`: `integer` or `nil`
 - `callback`: `callable` (async version) or `nil` (sync version)
   - `err`: `nil` or `string`
   - `bytes`: `integer` or `nil`
 
 Equivalent to `pwritev(2)`. Returns the number of bytes written.
+
+If `offset` is nil or omitted, it will default to `-1`, which indicates 'use and update the current file offset.'
+
+**Note:** When `offset` is >= 0, the current file offset will not be updated by the write.
 
 **Returns (sync version):** `integer` or `fail`
 
