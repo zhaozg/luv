@@ -6,7 +6,7 @@
 # Redistribution and use of this file is allowed according to the terms of the MIT license.
 # Debugged and (now seriously) modified by Ronan Collobert, for Torch7
 
-#project(Lua53 C)
+#project(Lua54 C)
 
 IF(DEFINED ENV{LUA_DIR})
   SET(LUA_DIR $ENV{LUA_DIR})
@@ -127,6 +127,8 @@ IF(LUA_COMPILE_FLAGS)
 	COMPILE_FLAGS ${LUA_COMPILE_FLAGS}
   )
 ENDIF()
+set_target_properties(lualib PROPERTIES
+  COMPILE_DEFINITIONS MAKE_LIB=1)
 
 target_link_libraries (lualib ${LIBS} )
 set_target_properties (lualib PROPERTIES OUTPUT_NAME "lua53")
