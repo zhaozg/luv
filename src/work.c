@@ -68,8 +68,10 @@ static void luv_work_cb(uv_work_t* req) {
   luv_work_t* work = (luv_work_t*)req->data;
   luv_work_ctx_t* ctx = work->ctx;
   lua_State *L = work->args.L;
+  int memb, meme, top;
 
-  int top = lua_gettop(L);
+  memb = lua_gc(L, LUA_GCCOUNT, 0);
+  top = lua_gettop(L);
 
   /* push lua function */
   lua_pushlstring(L, ctx->code, ctx->len);
@@ -107,7 +109,11 @@ static void luv_work_cb(uv_work_t* req) {
     lua_pop(L, 1);
     luv_thread_arg_clear(L, &work->args, LUVF_THREAD_SIDE_CHILD);
   }
-  work->args.L = L;
+
+  lua_gc(L, LUA_GCCOLLECT, 0);
+  lua_gc(L, LUA_GCCOLLECT, 0);
+  meme = lua_gc(L, LUA_GCCOUNT, 0);
+
   if (top!=lua_gettop(L))
     luaL_error(L, "stack not balance in luv_work_cb, need %d but %d", top, lua_gettop(L));
 }

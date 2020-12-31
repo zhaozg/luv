@@ -1,31 +1,44 @@
 return require('lib/tap')(function (test)
   test("test threadpool", function(print,p,expect,_uv)
     p('Please be patient, the test cost a lots of time')
-    local count = 1000 --for memleaks dected
+    local count = 1000000 --for memleaks dected
+    local pktlen = 40000
     local step = 0
     local ctx
+    local start, stop, ls
+
     ctx = _uv.new_work(
         function(n,s) --work,in threadpool
             local uv = require('luv')
             local t = uv.thread_self()
-            uv.sleep(10)
             return n, n*n, t, s
         end,
-        function(n,r,id, s)
+        function(n, r, id, s)
             assert(n*n==r)
-            assert(#s==4096)
+            assert(#s==pktlen)
             if step < count then
                 _uv.queue_work(ctx,n,s)
                 step = step + 1
-                if (step % 100==0) then
+                if (step * 10 % count==0) then
                     p(string.format('run %d%%', math.floor(step*100/count)))
                 end
             else
               ctx = nil
+              collectgarbage('collect')
+              collectgarbage('collect')
+              stop = collectgarbage('count')
+              if ((stop-start) > pktlen*3/1024) then
+                print(string.format("****mem used from %d to %d %d\n", start, stop, stop-start))
+              end
+              assert(stop-start)
             end
         end    --after work, in loop thread
     )
-    local ls = string.rep('-',4096)
+    collectgarbage('collect')
+    collectgarbage('collect')
+    start = collectgarbage('count')
+
+    ls = string.rep('-',pktlen)
 
     _uv.queue_work(ctx,2,ls)
     _uv.queue_work(ctx,4,ls)

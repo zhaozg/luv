@@ -46,6 +46,9 @@ local function run()
     else
       local cwd = uv.cwd()
       local pass, err = xpcall(function ()
+        collectgarbage()
+        collectgarbage()
+        local mem_start = collectgarbage('count')
         local expected = 0
         local function expect(fn, count)
           expected = expected + (count or 1)
@@ -57,9 +60,14 @@ local function run()
           end
         end
         test.fn(protect, pprotect, expect, uv)
-        collectgarbage()
         uv.run()
         collectgarbage()
+        collectgarbage()
+        local mem_stop = collectgarbage('count')
+        if (mem_stop > mem_stop) then
+          print(string.format("****memleaks from %d to %d %d\n",
+              mem_start, mem_stop, mem_stop - mem_start))
+        end
         if expected > 0 then
           error("Missing " .. expected .. " expected call" .. (expected == 1 and "" or "s"))
         elseif expected < 0 then
