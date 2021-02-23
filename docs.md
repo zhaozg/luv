@@ -2662,7 +2662,7 @@ Limited equivalent to `sendfile(2)`. Returns the number of bytes written.
   - `permission`: `boolean` or `nil`
 
 Equivalent to `access(2)` on Unix. Windows uses `GetFileAttributesW()`. Access
-`mode` can be an integer or a string containing `""R"` or `"W"` or `"X"`.
+`mode` can be an integer or a string containing `"R"` or `"W"` or `"X"`.
 Returns `true` or `false` indicating access permission.
 
 **Returns (sync version):** `boolean` or `fail`
@@ -2762,19 +2762,19 @@ Equivalent to `link(2)`.
 
 **Returns (async version):** `uv_fs_t userdata`
 
-### `uv.fs_symlink(path, new_path, flags, [callback])`
+### `uv.fs_symlink(path, new_path, [flags], [callback])`
 
 **Parameters:**
 - `path`: `string`
 - `new_path`: `string`
-- `flags`: `table` or `nil`
+- `flags`: `table`, `integer`, or `nil`
   - `dir`: `boolean`
   - `junction`: `boolean`
 - `callback`: `callable` (async version) or `nil` (sync version)
   - `err`: `nil` or `string`
   - `success`: `boolean` or `nil`
 
-Equivalent to `symlink(2)`.
+Equivalent to `symlink(2)`. If the `flags` parameter is omitted, then the 3rd parameter will be treated as the `callback`.
 
 **Returns (sync version):** `boolean` or `fail`
 
@@ -2856,12 +2856,12 @@ Equivalent to `lchown(2)`.
 
 **Returns (async version):** `uv_fs_t userdata`
 
-### `uv.fs_copyfile(path, new_path, flags, [callback])`
+### `uv.fs_copyfile(path, new_path, [flags], [callback])`
 
 **Parameters:**
 - `path`: `string`
 - `new_path`: `string`
-- `flags`: `table` or `nil`
+- `flags`: `table`, `integer`, or `nil`
   - `excl`: `boolean`
   - `ficlone`: `boolean`
   - `ficlone_force`: `boolean`
@@ -2869,7 +2869,7 @@ Equivalent to `lchown(2)`.
   - `err`: `nil` or `string`
   - `success`: `boolean` or `nil`
 
-Copies a file from path to new_path.
+Copies a file from path to new_path. If the `flags` parameter is omitted, then the 3rd parameter will be treated as the `callback`.
 
 **Returns (sync version):** `boolean` or `fail`
 
