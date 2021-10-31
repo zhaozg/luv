@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 
 if(POLICY CMP0053)
   cmake_policy(SET CMP0053 NEW) # faster evaluation of variable references
@@ -20,10 +20,6 @@ option(BUILD_MODULE "Build as module" ON)
 option(BUILD_STATIC_LIBS "Build static library" OFF)
 option(BUILD_SHARED_LIBS "Build shared library" OFF)
 option(WITH_SHARED_LIBUV "Link to a shared libuv library instead of static linking" OFF)
-
-if (MINGW)
-  add_definitions(-D_WIN32_WINNT=0x0600)
-endif (MINGW)
 
 if (WIN32)
   # replace /MD to /MT to avoid link msvcr*.dll
@@ -68,6 +64,11 @@ if (WITH_SHARED_LIBUV)
   find_package(Libuv REQUIRED)
   include_directories(${LIBUV_INCLUDE_DIR})
 else (WITH_SHARED_LIBUV)
+  if(DEFINED ENV{LIBUV_DIR})
+    set(LIBUV_DIR $ENV{LIBUV_DIR})
+  else()
+    set(LIBUV_DIR deps/libuv)
+  endif()
   include_directories(deps/libuv/include)
   add_subdirectory(deps/libuv EXCLUDE_FROM_ALL)
   if (BUILD_MODULE)
@@ -77,95 +78,92 @@ else (WITH_SHARED_LIBUV)
   set_target_properties(uv_a PROPERTIES COMPILE_FLAGS "-fPIC")
 endif (WITH_SHARED_LIBUV)
 
-if (LUA)
-  MESSAGE(STATUS "Lua: using information from luarocks")
+if (LUA_BUILD_TYPE STREQUAL System)
 
-  MESSAGE(STATUS "LUA_LIBDIR: " ${LUA_LIBDIR})
-  MESSAGE(STATUS "LUA_LIBFILE: " ${LUA_LIBFILE})
-  MESSAGE(STATUS "LUA_INCDIR: " ${LUA_INCDIR})
-  MESSAGE(STATUS "LUA: " ${LUA})
-
-  SET(LUA_EXECUTABLE "${LUA}")
-  SET(LUA_INCLUDE_DIR "${LUA_INCDIR}")
-  SET(LUA_PACKAGE_PATH "${LUADIR}")
-  SET(LUA_PACKAGE_CPATH "${LIBDIR}")
-
-  SET(INSTALL_LIB_DIR ${LIBDIR})
-
-  if (LUA_LIBDIR)
-    if (NOT LUA_LIBFILE)
-      # If LIBDIR is set but LIBFILE is not, then that means
-      # Luarocks 2.x is being used, and we'll need to find the lib
-      # ourselves
-      GET_FILENAME_COMPONENT(LUA_EXEC_NAME ${LUA_EXECUTABLE} NAME_WE)
-      IF(LUA_EXEC_NAME STREQUAL "luajit")
-      FIND_LIBRARY(LUA_LIBRARIES
-        NAMES luajit libluajit
-        PATHS ${LUA_LIBDIR}
-        NO_DEFAULT_PATH)
-      ELSEIF(LUA_EXEC_NAME MATCHES "lua.*")
-        FIND_LIBRARY(LUA_LIBRARIES
-          NAMES lua lua54 lua53 lua52 lua51 liblua liblua54 liblua53 liblua52 liblua51
-          PATHS ${LUA_LIBDIR}
-          NO_DEFAULT_PATH)
-      ENDIF()
+  if (USE_LUAJIT)
+    # We only link the libs on Windows, so find_package fully succeeding
+    # is only required on Windows
+    if (WIN32)
+      find_package(LuaJIT REQUIRED)
+      link_directories(${LUAJIT_LIBRARIES})
     else()
-      # Otherwise, we can just use the LIBFILE that Luarocks provides
-      get_filename_component(LUA_LIBRARIES "${LUA_LIBDIR}/${LUA_LIBFILE}" ABSOLUTE)
+      find_package(LuaJIT)
     endif()
-    MESSAGE(STATUS "Lua library: ${LUA_LIBRARIES}")
-  else()
-    MESSAGE(STATUS "Lua library not set, presuming LuaRocks config has link_lua_explicitly set to false")
+    if(NOT LUAJIT_INCLUDE_DIR)
+      message( FATAL_ERROR "Failed to find LuaJIT headers. Variable `LUAJIT_INCLUDE_DIR' expected to be defined.")
+    endif()
+    include_directories(${LUAJIT_INCLUDE_DIR})
+  else (USE_LUAJIT)
+    # We only link the libs on Windows, so find_package fully succeeding
+    # is only required on Windows
+    if (WIN32)
+      find_package(Lua REQUIRED)
+    else()
+      find_package(Lua)
+    endif()
+    if(NOT LUA_INCLUDE_DIR)
+      message( FATAL_ERROR "Failed to find Lua headers. Variable `LUA_INCLUDE_DIR' expected to be defined.")
+    endif()
+    include_directories(${LUA_INCLUDE_DIR})
+  endif (USE_LUAJIT)
+
+else (LUA_BUILD_TYPE STREQUAL System)
+
+  if (LUA_BUILD_TYPE STREQUAL Static)
+    SET(WITH_SHARED_LUA OFF)
+  else (LUA_BUILD_TYPE STREQUAL Static)
+    SET(WITH_SHARED_LUA ON)
+  endif (LUA_BUILD_TYPE STREQUAL Static)
+
+  if(DEFINED ENV{LUA_FORGE_DIR})
+    set(LUA_FORGE_DIR $ENV{LUA_FORGE_DIR})
   endif()
+  get_directory_property(hasParent PARENT_DIRECTORY)
 
-  include_directories(${LUA_INCLUDE_DIR})
-else (LUA)
-  if (LUA_BUILD_TYPE STREQUAL System)
-    if (USE_LUAJIT)
-      # We only link the libs on Windows, so find_package fully succeeding
-      # is only required on Windows
-      if (WIN32)
-        find_package(LuaJIT REQUIRED)
-        link_directories(${LUAJIT_LIBRARIES})
-      else()
-        find_package(LuaJIT)
-      endif()
-      if(NOT LUAJIT_INCLUDE_DIR)
-        message( FATAL_ERROR "Failed to find LuaJIT headers. Variable `LUAJIT_INCLUDE_DIR' expected to be defined.")
-      endif()
-      include_directories(${LUAJIT_INCLUDE_DIR})
-    else (USE_LUAJIT)
-      # We only link the libs on Windows, so find_package fully succeeding
-      # is only required on Windows
-      if (WIN32)
-        find_package(Lua REQUIRED)
-      else()
-        find_package(Lua)
-      endif()
-      if(NOT LUA_INCLUDE_DIR)
-        message( FATAL_ERROR "Failed to find Lua headers. Variable `LUA_INCLUDE_DIR' expected to be defined.")
-      endif()
-      include_directories(${LUA_INCLUDE_DIR})
-    endif (USE_LUAJIT)
+  if (USE_LUAJIT)
+    SET(LUA_ENGINE LuaJIT)
 
-  else (LUA_BUILD_TYPE STREQUAL System)
-    if (LUA_BUILD_TYPE STREQUAL Static)
-      SET(WITH_SHARED_LUA OFF)
-    else (LUA_BUILD_TYPE STREQUAL Static)
-      SET(WITH_SHARED_LUA ON)
-    endif (LUA_BUILD_TYPE STREQUAL Static)
-    if (USE_LUAJIT)
+    if(LUA_FORGE_DIR)
+      add_subdirectory(${LUA_FORGE_DIR} lua EXCLUDE_FROM_ALL)
+
+      include_directories(${LUA_FORGE_DIR}/LuaJIT/src)
+      if (hasParent)
+        set(LUA_TARGET luajit PARENT_SCOPE)
+        set(LUA_LIBRARIES libluajit PARENT_SCOPE)
+        set(LUA_INCLUDE_DIR ${LUA_FORGE_DIR}/LuaJIT/src PARENT_SCOPE)
+        set(LUA_TARGET_PATH ${CMAKE_CURRENT_BINARY_DIR}/lua PARENT_SCOPE)
+      endif (hasParent)
+    else(LUA_FORGE_DIR)
       include(deps/luajit.cmake)
       set(LUA_INCLUDE_DIR deps/luajit/src)
       set(LUAJIT_LIBRARIES luajit-5.1)
-    else(USE_LUAJIT)
+      include_directories(${LUA_INCLUDE_DIR})
+      set(LUA_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/${LUA_INCLUDE_DIR})
+    endif (LUA_FORGE_DIR)
+  else (USE_LUAJIT)
+    SET(LUA_ENGINE Lua)
+
+    if (LUA_FORGE_DIR)
+      add_subdirectory(${LUA_FORGE_DIR} lua EXCLUDE_FROM_ALL)
+
+      include_directories(${LUA_FORGE_DIR}/lua)
+      if (hasParent)
+        set(LUA_TARGET lua PARENT_SCOPE)
+        set(LUA_LIBRARIES lua PARENT_SCOPE)
+        set(LUA_INCLUDE_DIR ${LUA_FORGE_DIR}/lua PARENT_SCOPE)
+        set(LUA_TARGET_PATH ${CMAKE_CURRENT_BINARY_DIR}/lua PARENT_SCOPE)
+      endif (hasParent)
+    else ()
       include(deps/lua.cmake)
       set(LUA_INCLUDE_DIR deps/lua)
-    endif (USE_LUAJIT)
-    include_directories(${LUA_INCLUDE_DIR})
-    set(LUA_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/${LUA_INCLUDE_DIR})
-  endif (LUA_BUILD_TYPE STREQUAL System)
-endif (LUA)
+      set(LUA_LIBRARIES lua)
+      include_directories(${LUA_INCLUDE_DIR})
+      set(LUA_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/${LUA_INCLUDE_DIR})
+    endif ()
+  endif (USE_LUAJIT)
+
+  MESSAGE(STATUS "LUA_TARGET: " ${LUA_TARGET})
+endif (LUA_BUILD_TYPE STREQUAL System)
 
 if (EXISTS "${LUA_INCLUDE_DIR}/lua.h")
     # At least 5.[012] have different ways to express the version
