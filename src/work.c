@@ -52,7 +52,6 @@ static lua_State* default_vms[4];
 #define MAX_THREADPOOL_SIZE 128
 #endif
 
->>>>>>> master
 static luv_work_ctx_t* luv_check_work_ctx(lua_State* L, int index) {
   luv_work_ctx_t* ctx = (luv_work_ctx_t*)luaL_checkudata(L, index, "luv_work_ctx");
   return ctx;
