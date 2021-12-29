@@ -196,52 +196,6 @@ static int luv_queue_work(lua_State* L) {
   int ret, n;
 
   memset(work, 0, sizeof(*work));
-<<<<<<< HEAD
-  //prepare lua_State for threadpool
-  lua_rawgeti(L, LUA_REGISTRYINDEX, ctx->pool_ref);
-  n = lua_rawlen(L, -1);
-  if (n > 0) {
-    int i;
-    lua_rawgeti(L, -1, 1);
-    work->args.L = *(lua_State **)lua_touserdata(L, -1);
-    lua_pop(L, 1);
-    for(i=1; i<n; i++) {
-      lua_rawgeti(L, -1, i+1);
-      lua_rawseti(L, -2, i);
-    }
-    lua_pushnil(L);
-    lua_rawseti(L, -2, n);
-  }
-  else
-  {
-    work->args.L = acquire_vm_cb();
-    lua_pushboolean(L, 1);
-    lua_setglobal(L, "_THREAD");
-  }
-  lua_pop(L, 1);
-
-||||||| 901fe22
-  //prepare lua_State for threadpool
-  lua_rawgeti(L, LUA_REGISTRYINDEX, ctx->pool_ref);
-  n = lua_rawlen(L, -1);
-  if (n > 0) {
-    int i;
-    lua_rawgeti(L, -1, 1);
-    work->args.L = *(lua_State **)lua_touserdata(L, -1);
-    lua_pop(L, 1);
-    for(i=1; i<n; i++) {
-      lua_rawgeti(L, -1, i+1);
-      lua_rawseti(L, -2, i);
-    }
-    lua_pushnil(L);
-    lua_rawseti(L, -2, n);
-  }
-  else
-    work->args.L = acquire_vm_cb();
-  lua_pop(L, 1);
-
-=======
->>>>>>> master
   ret = luv_thread_arg_set(L, &work->args, 2, top, LUVF_THREAD_SIDE_MAIN); //clear in sub threads,luv_work_cb
   if (ret < 0) {
     luv_thread_arg_clear(L, &work->args, LUVF_THREAD_SIDE_MAIN);
