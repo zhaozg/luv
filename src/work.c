@@ -221,7 +221,11 @@ static int luv_queue_work(lua_State* L) {
     lua_rawseti(L, -2, n);
   }
   else
+  {
     work->args.L = acquire_vm_cb();
+    lua_pushboolean(L, 1);
+    lua_setglobal(L, "_THREAD");
+  }
   lua_pop(L, 1);
 
   ret = luv_thread_arg_set(L, &work->args, 2, top, LUVF_THREAD_SIDE_MAIN); //clear in sub threads,luv_work_cb

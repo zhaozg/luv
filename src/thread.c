@@ -345,6 +345,8 @@ static int luv_new_thread(lua_State* L) {
   thread->len = len;
 
   thread->args.L = acquire_vm_cb();
+  lua_pushboolean(thread->args.L, 1);
+  lua_setglobal(thread->args.L, "_THREAD");
 #if LUV_UV_VERSION_GEQ(1, 26, 0)
   ret = uv_thread_create_ex(&thread->handle, &options, luv_thread_cb, thread);
 #else
