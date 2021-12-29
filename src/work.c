@@ -33,6 +33,7 @@ typedef struct {
   int ref;            /* ref to luv_work_ctx_t, which create a new uv_work_t*/
 } luv_work_t;
 
+static uv_once_t once_vmkey = UV_ONCE_INIT;
 static uv_key_t tls_vmkey;  /* thread local storage key for Lua state */
 
 static luv_work_ctx_t* luv_check_work_ctx(lua_State* L, int index) {
@@ -224,9 +225,17 @@ static const luaL_Reg luv_work_ctx_methods[] = {
   {NULL, NULL}
 };
 
-static void luv_work_init(lua_State* L) {
-  int status;
+static void luv_key_init_once()
+{
+  int status = uv_key_create(&tls_vmkey);
+  if (status != 0)
+  {
+    fprintf(stderr, "*** threadpool not works\n");
+    fprintf(stderr, "Error to uv_key_create with %s: %s\n", uv_err_name(status), uv_strerror(status));
+  }
+}
 
+static void luv_work_init(lua_State* L) {
   luaL_newmetatable(L, "luv_work_ctx");
   lua_pushcfunction(L, luv_work_ctx_tostring);
   lua_setfield(L, -2, "__tostring");
@@ -236,10 +245,5 @@ static void luv_work_init(lua_State* L) {
   lua_setfield(L, -2, "__index");
   lua_pop(L, 1);
 
-  status = uv_key_create(&tls_vmkey);
-  if (status != 0)
-  {
-    fprintf(stderr, "*** threadpool not works\n");
-    fprintf(stderr, "Error to uv_key_create with %s: %s\n", uv_err_name(status), uv_strerror(status));
-  }
+  uv_once(&once_vmkey, luv_key_init_once);
 }
