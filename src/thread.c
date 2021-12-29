@@ -30,6 +30,9 @@ static lua_State* luv_thread_acquire_vm() {
   // Add in the lua standard libraries
   luaL_openlibs(L);
 
+  lua_pushboolean(L, 1);
+  lua_setglobal(L, "_THREAD");
+
   // Get package.loaded, so we can store uv in it.
   lua_getglobal(L, "package");
   lua_getfield(L, -1, "loaded");
@@ -277,7 +280,7 @@ static int luv_thread_tostring(lua_State* L)
 static void luv_thread_cb(void* varg) {
   //acquire vm and get top
   luv_thread_t* thd = (luv_thread_t*)varg;
-  lua_State* L = thd->args.L;
+  lua_State* L = acquire_vm_cb();
   luv_ctx_t *ctx = luv_context(L);
 
   //push lua function, thread entry
@@ -344,16 +347,12 @@ static int luv_new_thread(lua_State* L) {
   }
   thread->len = len;
 
-  thread->args.L = acquire_vm_cb();
-  lua_pushboolean(thread->args.L, 1);
-  lua_setglobal(thread->args.L, "_THREAD");
 #if LUV_UV_VERSION_GEQ(1, 26, 0)
   ret = uv_thread_create_ex(&thread->handle, &options, luv_thread_cb, thread);
 #else
   ret = uv_thread_create(&thread->handle, luv_thread_cb, thread);
 #endif
   if (ret < 0) {
-    release_vm_cb(thread->args.L);
     return luv_error(L, ret);
   }
 
