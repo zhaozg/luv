@@ -15,6 +15,7 @@ return require('lib/tap')(function (test)
     local ctx
     ctx = _uv.new_work(
         function(n,s) --work,in threadpool
+            assert(_THREAD)
             local uv = require('luv')
             local t = uv.thread_self()
             uv.sleep(10)
@@ -70,6 +71,7 @@ return require('lib/tap')(function (test)
 
     ctx = _uv.new_work(
       function(n, s, a)         --work,in threadpool
+          assert(_THREAD)
           local uv = require('luv')
           local t = tostring(uv.thread_self())
           if a then
