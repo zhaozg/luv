@@ -42,7 +42,6 @@ static luv_work_ctx_t* luv_check_work_ctx(lua_State* L, int index) {
 }
 
 static int luv_work_ctx_gc(lua_State *L) {
-  int i, n;
   luv_work_ctx_t* ctx = luv_check_work_ctx(L, 1);
   free(ctx->code);
   luaL_unref(L, LUA_REGISTRYINDEX, ctx->after_work_cb);
@@ -194,7 +193,7 @@ static int luv_queue_work(lua_State* L) {
   int top = lua_gettop(L);
   luv_work_ctx_t* ctx = luv_check_work_ctx(L, 1);
   luv_work_t* work = (luv_work_t*)malloc(sizeof(*work));
-  int ret, n;
+  int ret;
 
   memset(work, 0, sizeof(*work));
   ret = luv_thread_arg_set(L, &work->args, 2, top, LUVF_THREAD_SIDE_MAIN); //clear in sub threads,luv_work_cb
@@ -234,8 +233,8 @@ static void luv_key_init_once()
     fprintf(stderr, "Error to uv_key_create with %s: %s\n", uv_err_name(status), uv_strerror(status));
   }
 }
-
 static void luv_work_init(lua_State* L) {
+
   luaL_newmetatable(L, "luv_work_ctx");
   lua_pushcfunction(L, luv_work_ctx_tostring);
   lua_setfield(L, -2, "__tostring");
