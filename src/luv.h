@@ -62,6 +62,9 @@
 #define MAX_TITLE_LENGTH (8192)
 #endif
 
+// indent of luv handle
+#define LUV_TAGS   ('L' << 24 |  'U' << 16 | 'V' << 8 | 'T')
+
 // luv flags to control luv_CFpcall routine
 #define LUVF_CALLBACK_NOEXIT       0x01       // Don't exit when LUA_ERRMEM
 #define LUVF_CALLBACK_NOTRACEBACK  0x02       // Don't traceback when error

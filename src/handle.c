@@ -32,9 +32,12 @@ static uv_handle_t* luv_check_handle(lua_State* L, int index) {
   int isHandle;
   uv_handle_t* handle;
   void *udata;
+  luv_handle_t* data;
   if (!(udata = lua_touserdata(L, index))) { goto fail; }
   if (!(handle = *(uv_handle_t**) udata)) { goto fail; }
   if (!handle->data) { goto fail; }
+  data = handle->data;
+  if (data->tag != LUV_TAGS) {goto fail;}
   lua_getfield(L, LUA_REGISTRYINDEX, "uv_handle");
   lua_getmetatable(L, index < 0 ? index - 1 : index);
   lua_rawget(L, -2);

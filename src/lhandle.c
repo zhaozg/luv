@@ -47,6 +47,7 @@ static luv_handle_t* luv_setup_handle(lua_State* L, luv_ctx_t* ctx) {
 
   lua_pushvalue(L, -1);
 
+  data->tag = LUV_TAGS;
   data->ref = luaL_ref(L, LUA_REGISTRYINDEX);
   data->callbacks[0] = LUA_NOREF;
   data->callbacks[1] = LUA_NOREF;

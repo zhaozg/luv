@@ -768,6 +768,10 @@ LUALIB_API void luv_set_cthread(lua_State* L, luv_CFcpcall cpcall) {
 static void walk_cb(uv_handle_t *handle, void *arg)
 {
   (void)arg;
+  luv_handle_t* data = (luv_handle_t*)handle->data;
+  if (!data) return;
+  if (data->tag != LUV_TAGS) return;
+
   if (!uv_is_closing(handle)) {
     uv_close(handle, luv_close_cb);
   }

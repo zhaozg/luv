@@ -40,9 +40,9 @@
 #define LUV_RESET 1
 
 typedef void (*luv_handle_extra_gc) (void* ptr);
-
 /* Ref for userdata and event callbacks */
 typedef struct {
+  uint32_t tag;
   int ref;
   int callbacks[2];
   luv_ctx_t* ctx;
