@@ -7,7 +7,7 @@ endif()
 project (luv C ASM)
 
 set(LUV_VERSION_MAJOR 1)
-set(LUV_VERSION_MINOR 43)
+set(LUV_VERSION_MINOR 44)
 set(LUV_VERSION_PATCH 0)
 set(LUV_VERSION ${LUV_VERSION_MAJOR}.${LUV_VERSION_MINOR}.${LUV_VERSION_PATCH})
 
@@ -247,7 +247,7 @@ if(WIN32)
 endif()
 
 foreach(TARGET_NAME ${ACTIVE_TARGETS})
-  if(WIN32)
+  if(WIN32 OR CYGWIN)
     if (LUA)
       target_link_libraries(${TARGET_NAME} ${LIBUV_LIBRARIES} ${LUA_LIBRARIES})
     else (LUA)
