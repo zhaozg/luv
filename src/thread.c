@@ -410,3 +410,9 @@ LUALIB_API void luv_set_thread_cb(luv_acquire_vm acquire, luv_release_vm release
   acquire_vm_cb = acquire;
   release_vm_cb = release;
 }
+
+LUALIB_API void luv_get_thread_cb(luv_acquire_vm *acquire, luv_release_vm *release)
+{
+  *acquire = acquire_vm_cb;
+  *release = release_vm_cb;
+}
