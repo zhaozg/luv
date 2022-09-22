@@ -166,10 +166,12 @@ static void luv_after_work_cb(uv_work_t* req, int status) {
   luv_ctx_t *lctx = luv_context(L);
   int i;
 
-  (void)status;
-
   lua_rawgeti(L, LUA_REGISTRYINDEX, ctx->after_work_cb);
-  i = luv_thread_arg_push(L, &work->rets, LUVF_THREAD_SIDE_MAIN);
+  if (status == 0) {
+    i = luv_thread_arg_push(L, &work->rets, LUVF_THREAD_SIDE_MAIN);
+  } else {
+    i = luv_error(L, status);
+  }
   lctx->cb_pcall(L, i, 0, 0);
 
   //ref down to ctx, up in luv_queue_work()
