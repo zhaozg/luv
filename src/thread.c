@@ -24,11 +24,13 @@ typedef struct {
   luv_thread_arg_t args;
 } luv_thread_t;
 
-static lua_State* luv_thread_acquire_vm() {
+static lua_State* luv_thread_acquire_vm(uv_loop_t *loop) {
   lua_State* L = luaL_newstate();
 
   // Add in the lua standard libraries
   luaL_openlibs(L);
+
+  luv_set_loop(L, loop);
 
   lua_pushboolean(L, 1);
   lua_setglobal(L, "_THREAD");
@@ -272,7 +274,7 @@ static int luv_thread_tostring(lua_State* L)
 static void luv_thread_cb(void* varg) {
   //acquire vm and get top
   luv_thread_t* thd = (luv_thread_t*)varg;
-  lua_State* L = acquire_vm_cb();
+  lua_State* L = acquire_vm_cb(NULL);
   luv_ctx_t *ctx = luv_context(L);
 
   lua_pushboolean(L, 1);

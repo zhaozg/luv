@@ -132,7 +132,7 @@ static lua_State* luv_work_acquire_vm()
   lua_State* L = uv_key_get(&tls_vmkey);
   if (L == NULL)
   {
-    L = acquire_vm_cb();
+    L = acquire_vm_cb(NULL);
     uv_key_set(&tls_vmkey, L);
     lua_pushboolean(L, 1);
     lua_setglobal(L, "_THREAD");
