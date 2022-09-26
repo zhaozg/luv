@@ -31,11 +31,13 @@ typedef struct {
   luv_thread_arg_t args;
   luv_thread_arg_t rets;
   int ref;            /* ref to luv_work_ctx_t, which create a new uv_work_t*/
+  int self;
 } luv_work_t;
 
 static uv_once_t once_vmkey = UV_ONCE_INIT;
 static uv_key_t tls_vmkey;  /* thread local storage key for Lua state */
 static uv_mutex_t vm_mutex;
+static int vm_init = 0;
 
 static unsigned int idx_vms = 0;
 static unsigned int nvms = 0;
@@ -176,11 +178,11 @@ static void luv_after_work_cb(uv_work_t* req, int status) {
 
   //ref down to ctx, up in luv_queue_work()
   luaL_unref(L, LUA_REGISTRYINDEX, work->ref);
-  work->ref = LUA_NOREF;
+  luaL_unref(L, LUA_REGISTRYINDEX, work->self);
+  work->ref = work->self = LUA_NOREF;
 
   luv_thread_arg_clear(L, &work->args, LUVF_THREAD_SIDE_MAIN);
   luv_thread_arg_clear(L, &work->rets, LUVF_THREAD_MODE_ASYNC|LUVF_THREAD_SIDE_MAIN);
-  free(work);
 }
 
 static int luv_new_work(lua_State* L) {
@@ -215,35 +217,66 @@ static int luv_new_work(lua_State* L) {
 static int luv_queue_work(lua_State* L) {
   int top = lua_gettop(L);
   luv_work_ctx_t* ctx = luv_check_work_ctx(L, 1);
-  luv_work_t* work = (luv_work_t*)malloc(sizeof(*work));
+  luv_work_t* work = lua_newuserdata(L, sizeof(luv_work_t));
   int ret;
 
   memset(work, 0, sizeof(*work));
+  luaL_setmetatable(L, "uv_work");
+  work->self = work->ref = LUA_NOREF;
   ret = luv_thread_arg_set(L, &work->args, 2, top, LUVF_THREAD_SIDE_MAIN); //clear in sub threads,luv_work_cb
   if (ret < 0) {
     luv_thread_arg_clear(L, &work->args, LUVF_THREAD_SIDE_MAIN);
-    free(work);
     return luv_thread_arg_error(L);
   }
   work->ctx = ctx;
   work->work.data = work;
+
   ret = uv_queue_work(luv_loop(L), &work->work, luv_work_cb_wrapper, luv_after_work_cb);
   if (ret < 0) {
     luv_thread_arg_clear(L, &work->args, LUVF_THREAD_SIDE_MAIN);
-    free(work);
     return luv_error(L, ret);
   }
 
   //ref up to ctx
   lua_pushvalue(L, 1);
   work->ref = luaL_ref(L, LUA_REGISTRYINDEX);
+  lua_pushvalue(L, -1);
+  work->self = luaL_ref(L, LUA_REGISTRYINDEX);
 
-  lua_pushboolean(L, 1);
   return 1;
 }
 
 static const luaL_Reg luv_work_ctx_methods[] = {
   {"queue", luv_queue_work},
+  {NULL, NULL}
+};
+
+static luv_work_t* luv_check_work(lua_State* L, int index) {
+  luv_work_t* ctx = (luv_work_t*)luaL_checkudata(L, index, "uv_work");
+  return ctx;
+}
+
+static int luv_work_cancel(lua_State *L) {
+  luv_work_t* ctx = luv_check_work(L, 1);
+  int status = uv_cancel((uv_req_t*)&ctx->work);
+  return luv_result(L, status);
+}
+
+static int luv_work_gc(lua_State *L) {
+  luv_work_t* ctx = luv_check_work(L, 1);
+  luaL_unref(L, LUA_REGISTRYINDEX, ctx->self);
+  luaL_unref(L, LUA_REGISTRYINDEX, ctx->ref);
+  return 0;
+}
+
+static int luv_work_tostring(lua_State* L) {
+  luv_work_t* ctx = luv_check_work(L, 1);
+  lua_pushfstring(L, "uv_work: %p", ctx);
+  return 1;
+}
+
+static const luaL_Reg luv_work_methods[] = {
+  {"cancel", luv_work_cancel},
   {NULL, NULL}
 };
 
@@ -286,7 +319,6 @@ static void luv_key_init_once()
     }
     memset(vms, 0, sizeof(vms[0]) * nvms);
   }
-  idx_vms = 0;
 }
 
 static void luv_work_cleanup()
@@ -296,14 +328,22 @@ static void luv_work_cleanup()
   if (nvms == 0)
     return;
 
-  for (i = 0; i < nvms && vms[i]; i++)
+  uv_mutex_lock(&vm_mutex);
+  nvms = 0;
+  for (i = 0; i < idx_vms && vms[i]; i++)
+  {
     release_vm_cb(vms[i]);
+    vms[i] = NULL;
+  }
+  idx_vms = 0;
 
   if (vms != default_vms)
+  {
     free(vms);
+  }
+  uv_mutex_unlock(&vm_mutex);
 
   uv_mutex_destroy(&vm_mutex);
-  nvms = 0;
 }
 
 static void luv_work_init(lua_State* L) {
@@ -317,5 +357,26 @@ static void luv_work_init(lua_State* L) {
   lua_setfield(L, -2, "__index");
   lua_pop(L, 1);
 
+  luaL_newmetatable(L, "uv_work");
+  lua_pushcfunction(L, luv_work_tostring);
+  lua_setfield(L, -2, "__tostring");
+  lua_pushcfunction(L, luv_work_gc);
+  lua_setfield(L, -2, "__gc");
+  luaL_newlib(L, luv_work_methods);
+  lua_setfield(L, -2, "__index");
+  lua_pop(L, 1);
+
   uv_once(&once_vmkey, luv_key_init_once);
+  uv_mutex_lock(&vm_mutex);
+  if (vm_init==0)
+  {
+    luv_ctx_t *ctx = luv_context(L);
+    vm_init = 1;
+
+    lua_pushlightuserdata(L, ctx);
+    lua_pushboolean(L, 1);
+    lua_rawset(L, LUA_REGISTRYINDEX);
+  }
+  uv_mutex_unlock(&vm_mutex);
+
 }

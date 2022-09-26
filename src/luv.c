@@ -793,15 +793,28 @@ static void walk_cb(uv_handle_t *handle, void *arg)
 
 static int loop_gc(lua_State *L) {
   luv_ctx_t *ctx = luv_context(L);
-  uv_loop_t* loop = ctx->loop;
+  uv_loop_t* loop = luaL_checkudata(L, 1, "uv_loop.meta");
   if (loop==NULL)
     return 0;
+
+  if (ctx->loop != loop) {
+    printf("never here\n");
+    assert(0);
+  }
+
   // Call uv_close on every active handle
   uv_walk(loop, walk_cb, NULL);
   // Run the event loop until all handles are successfully closed
   while (uv_loop_close(loop)) {
     uv_run(loop, UV_RUN_DEFAULT);
   }
+
+  lua_pushlightuserdata(L, ctx);
+  lua_rawget(L, LUA_REGISTRYINDEX);
+  if (lua_toboolean(L, -1))
+    luv_work_cleanup();
+  lua_pop(L, 1);
+
   return 0;
 }
 
@@ -840,12 +853,6 @@ LUALIB_API int luaopen_luv (lua_State* L) {
     if (ret < 0) {
       return luaL_error(L, "%s: %s\n", uv_err_name(ret), uv_strerror(ret));
     }
-
-    /* do cleanup in main thread */
-    lua_getglobal(L, "_THREAD");
-    if (lua_isnil(L, -1))
-      atexit(luv_work_cleanup);
-    lua_pop(L, 1);
   }
   // pcall is NULL, luv use default callback routine
   if (ctx->cb_pcall==NULL) {
