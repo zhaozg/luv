@@ -16,7 +16,7 @@
  */
 #include "private.h"
 
-void luv_stack_dump(lua_State* L, const char* name) {
+static void luv_stack_dump(lua_State* L, const char* name) {
   int i, l;
   fprintf(stderr, "\nAPI STACK DUMP %p %d: %s\n", L, lua_status(L), name);
   for (i = 1, l = lua_gettop(L); i <= l; i++) {

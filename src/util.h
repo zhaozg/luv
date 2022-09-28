@@ -25,6 +25,6 @@
 #define LUV_UV_VERSION_LEQ(major, minor, patch) \
   (((major)<<16 | (minor)<<8 | (patch)) >= UV_VERSION_HEX)
 
-void luv_stack_dump(lua_State* L, const char* name);
+static void luv_stack_dump(lua_State* L, const char* name);
 
 #endif
