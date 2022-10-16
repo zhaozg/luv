@@ -39,6 +39,7 @@ static uv_key_t tls_vmkey;  /* thread local storage key for Lua state */
 static uv_mutex_t vm_mutex;
 static int vm_init = 0;
 
+static int running = 0;
 static unsigned int idx_vms = 0;
 static unsigned int nvms = 0;
 static lua_State** vms;
@@ -168,6 +169,10 @@ static void luv_after_work_cb(uv_work_t* req, int status) {
   luv_ctx_t *lctx = luv_context(L);
   int i;
 
+  uv_mutex_lock(&vm_mutex);
+  running--;
+  uv_mutex_unlock(&vm_mutex);
+
   lua_rawgeti(L, LUA_REGISTRYINDEX, ctx->after_work_cb);
   if (status == 0) {
     i = luv_thread_arg_push(L, &work->rets, LUVF_THREAD_SIDE_MAIN);
@@ -220,6 +225,10 @@ static int luv_queue_work(lua_State* L) {
   luv_work_t* work = lua_newuserdata(L, sizeof(luv_work_t));
   int ret;
 
+  uv_mutex_lock(&vm_mutex);
+  running++;
+  uv_mutex_unlock(&vm_mutex);
+
   memset(work, 0, sizeof(*work));
   luaL_setmetatable(L, "uv_work");
   work->self = work->ref = LUA_NOREF;
@@ -246,8 +255,16 @@ static int luv_queue_work(lua_State* L) {
   return 1;
 }
 
+static int luv_queue_usable(lua_State* L) {
+  lua_pushboolean(L, running >=0 && running + 1 < nvms);
+  lua_pushinteger(L, running);
+  return 2;
+};
+
 static const luaL_Reg luv_work_ctx_methods[] = {
   {"queue", luv_queue_work},
+  {"usable", luv_queue_usable},
+
   {NULL, NULL}
 };
 

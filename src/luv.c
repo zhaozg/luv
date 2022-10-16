@@ -382,6 +382,7 @@ static const luaL_Reg luv_functions[] = {
   // work.c
   {"new_work", luv_new_work},
   {"queue_work", luv_queue_work},
+  {"queue_usable", luv_queue_usable},
 
   // util.c
 #if LUV_UV_VERSION_GEQ(1, 10, 0)
