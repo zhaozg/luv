@@ -1,4 +1,5 @@
-local TEST_PORT = 9123
+math.randomseed(os.time())
+local TEST_PORT = math.random(1025, 65535)
 
 return require('lib/tap')(function (test)
   test("basic udp server and client (ipv4)", function (print, p, expect, uv)
@@ -192,7 +193,7 @@ return require('lib/tap')(function (test)
         interface_addr = "::1%lo0"
         assert(uv.udp_set_membership(server, multicast_addr, interface_addr, "join"))
       else
-        assert(not err, err)
+        assert(not err, errname)
       end
 
       local client = assert(uv.new_udp())
@@ -249,6 +250,13 @@ return require('lib/tap')(function (test)
         --  ip6tables -A OUTPUT -s ::1 -j ACCEPT
         if err == "EPERM" then
           print("send to multicast ip was likely denied by firewall, skipping")
+          client:close()
+          server:close()
+          timeout:close()
+          return
+        end
+        if err == "EHOSTUNREACH" then
+          print("send to an EHOSTUNREACH multicast ip, skipping")
           client:close()
           server:close()
           timeout:close()
