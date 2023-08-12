@@ -16,9 +16,9 @@ BUILD_DIR ?= build
 BUILD_TYPE ?= RelWithDebInfo
 
 ifeq ($(WITH_LUA_ENGINE), LuaJIT)
-  LUABIN=$(BUILD_DIR)/luajit
+  LUABIN=luajit
 else
-  LUABIN=$(BUILD_DIR)/lua
+  LUABIN=lua
 endif
 
 CMAKE_OPTIONS += \
