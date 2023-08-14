@@ -121,6 +121,16 @@ static int luv_close(lua_State* L) {
   return 0;
 }
 
+static void luv_handle_free(uv_handle_t* handle) {
+  luv_handle_t* data = (luv_handle_t*)handle->data;
+  if (data) {
+    if (data->extra_gc)
+      data->extra_gc(data->extra);
+    free(data);
+  }
+  free(handle);
+}
+
 static void luv_gc_cb(uv_handle_t* handle) {
   luv_close_cb(handle);
   luv_handle_free(handle);
