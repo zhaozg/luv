@@ -179,7 +179,7 @@ static void luv_after_work_cb(uv_work_t* req, int status) {
   } else {
     i = luv_error(L, status);
   }
-  lctx->cb_pcall(L, i, 0, 0);
+  lctx->cb_pcall(L, i, 0, LUVF_CALLBACK_FLAGS);
 
   //ref down to ctx, up in luv_queue_work()
   luaL_unref(L, LUA_REGISTRYINDEX, work->ref);
