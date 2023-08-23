@@ -1279,7 +1279,7 @@ When the child process exits, `on_exit` is called with an exit code and signal.
 
 **Parameters:**
 - `process`: `uv_process_t userdata`
-- `signum`: `integer` or `string`
+- `signum`: `integer` or `string` or `nil` (default: `sigterm`)
 
 Sends the specified signal to the given process handle. Check the documentation
 on `uv_signal_t` for signal support, specially on Windows.
@@ -1290,7 +1290,7 @@ on `uv_signal_t` for signal support, specially on Windows.
 
 **Parameters:**
 - `pid`: `integer`
-- `signum`: `integer` or `string`
+- `signum`: `integer` or `string` or `nil` (default: `sigterm`)
 
 Sends the specified signal to the given PID. Check the documentation on
 `uv_signal_t` for signal support, specially on Windows.
@@ -3771,7 +3771,12 @@ Sets the environmental variable specified by `name` with the string `value`.
 
 **Warning:** This function is not thread safe.
 
-### `uv.os_unsetenv()`
+### `uv.os_unsetenv(name)`
+
+**Parameters:**
+- `name`: `string`
+
+Unsets the environmental variable specified by `name`.
 
 **Returns:** `boolean` or `fail`
 
