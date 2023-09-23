@@ -385,6 +385,21 @@ ELSE()
   SET_TARGET_PROPERTIES(luajit PROPERTIES ENABLE_EXPORTS ON)
 ENDIF()
 
+set(luajit_headers
+  ${LUAJIT_DIR}/src/lauxlib.h
+  ${LUAJIT_DIR}/src/lua.h
+  ${LUAJIT_DIR}/src/luaconf.h
+  ${LUAJIT_DIR}/src/lualib.h
+  ${LUAJIT_DIR}/src/luajit.h)
+set(includeDir ${CMAKE_CURRENT_BINARY_DIR}/include)
+file(COPY ${luajit_headers} DESTINATION ${includeDir})
+add_library(luajit-header INTERFACE)
+target_include_directories(luajit-header INTERFACE ${includeDir})
+
+add_library(luajit::lib ALIAS libluajit)
+add_library(luajit::header ALIAS luajit-header)
+add_executable(luajit:lua ALIAS luajit)
+
 MACRO(LUAJIT_add_custom_commands luajit_target)
   SET(target_srcs "")
   FOREACH(file ${ARGN})
