@@ -779,7 +779,7 @@ end)
 Creates and initializes a new `uv_prepare_t`. Returns the Lua userdata wrapping
 it.
 
-**Returns:** `uv_prepare_t userdata` or `fail`
+**Returns:** `uv_prepare_t userdata`
 
 ### `uv.prepare_start(prepare, callback)`
 
@@ -825,7 +825,7 @@ end)
 Creates and initializes a new `uv_check_t`. Returns the Lua userdata wrapping
 it.
 
-**Returns:** `uv_check_t userdata` or `fail`
+**Returns:** `uv_check_t userdata`
 
 ### `uv.check_start(check, callback)`
 
@@ -878,7 +878,7 @@ end)
 Creates and initializes a new `uv_idle_t`. Returns the Lua userdata wrapping
 it.
 
-**Returns:** `uv_idle_t userdata` or `fail`
+**Returns:** `uv_idle_t userdata`
 
 ### `uv.idle_start(idle, callback)`
 
@@ -1960,7 +1960,7 @@ Bind the pipe to a file path (Unix) or a name (Windows).
 `Flags`:
 
 - If `type(flags)` is `number`, it must be `0` or `uv.constants.PIPE_NO_TRUNCATE`.
-- If `type(flags)` is `table`, it must be `{}` or `{ no_trunate = true|false }`.
+- If `type(flags)` is `table`, it must be `{}` or `{ no_truncate = true|false }`.
 - If `type(flags)` is `nil`, it use default value `0`.
 - Returns `EINVAL` for unsupported flags without performing the bind operation.
 
@@ -1991,7 +1991,7 @@ Connect to the Unix domain socket or the named pipe.
 `Flags`:
 
 - If `type(flags)` is `number`, it must be `0` or `uv.constants.PIPE_NO_TRUNCATE`.
-- If `type(flags)` is `table`, it must be `{}` or `{ no_trunate = true|false }`.
+- If `type(flags)` is `table`, it must be `{}` or `{ no_truncate = true|false }`.
 - If `type(flags)` is `nil`, it use default value `0`.
 - Returns `EINVAL` for unsupported flags without performing the bind operation.
 
