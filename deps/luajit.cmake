@@ -396,7 +396,7 @@ file(COPY ${luajit_headers} DESTINATION ${includeDir})
 add_library(luajit-header INTERFACE)
 target_include_directories(luajit-header INTERFACE ${includeDir})
 
-add_library(luajit::lib ALIAS libluajit)
+add_library(luajit::lib ALIAS luajit-5.1)
 add_library(luajit::header ALIAS luajit-header)
 add_executable(luajit:lua ALIAS luajit)
 
