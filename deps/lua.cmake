@@ -128,7 +128,7 @@ file(COPY ${publicHeaderFiles} DESTINATION ${includeDir})
 add_library(lua-header INTERFACE)
 target_include_directories(lua-header INTERFACE ${includeDir})
 
-add_library(lua::lib ALIAS liblua)
+add_library(lua::lib ALIAS lualib)
 add_library(lua::header ALIAS lua-header)
 add_executable(lua::lua ALIAS lua)
 
