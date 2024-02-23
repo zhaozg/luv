@@ -256,8 +256,10 @@ static int luv_queue_work(lua_State* L) {
 }
 
 static int luv_queue_usable(lua_State* L) {
+  uv_mutex_lock(&vm_mutex);
   lua_pushboolean(L, running >=0 && running + 1 < nvms);
   lua_pushinteger(L, running);
+  uv_mutex_unlock(&vm_mutex);
   return 2;
 };
 

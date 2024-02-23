@@ -7,7 +7,7 @@ if [[ ! -f src/luv.c ]] ; then
 	exit 1
 fi
 
-func_definitions=$(sed -n '/luaL_Reg luv_functions\[\] = {$/,/^};$/{p;/^\};$/q}' src/luv.c)
+func_definitions=$(gsed -n '/luaL_Reg luv_functions\[\] = {$/,/^};$/{p;/^\};$/q}' src/luv.c)
 funcs_start_line_number=$(awk '/luaL_Reg luv_functions\[\] = \{/ {print FNR}' src/luv.c)
 after_funcs=$((funcs_start_line_number+1))
 method_definitions=$(tail -n +$after_funcs src/luv.c | sed -n '/luaL_Reg/,/^\};$/p')

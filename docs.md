@@ -178,7 +178,7 @@ See Libuv's [Error constants](https://docs.libuv.org/en/v1.x/errors.html#error-c
 - `EMSGSIZE`: message too long.
 - `ENAMETOOLONG`: name too long.
 - `ENETDOWN`: network is down.
-- `ENETUNREACH`: network is unreachable.
+- `ENETUNREACH`: [network](2024-02-23_network.md) is unreachable.
 - `ENFILE`: file table overflow.
 - `ENOBUFS`: no buffer space available.
 - `ENODEV`: no such device.
@@ -3242,6 +3242,17 @@ returned from `work_callback` are passed to `after_work_callback`, which is
 called in the main loop thread.
 
 **Returns:** `boolean` or `fail`
+
+### `uv.queue_usable()`
+
+> method from `work_ctx:usable()`
+
+**Parameters:**
+- `work_ctx`: `luv_work_ctx_t userdata`
+
+Check weather queue usable.
+
+**Returns:** `boolean`
 
 ## DNS utility functions
 
