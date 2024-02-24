@@ -247,6 +247,13 @@ ELSEIF(NOT WIN32)
   ENDIF()
 ENDIF()
 
+set(includeDir ${CMAKE_CURRENT_BINARY_DIR}/include)
+set(luajit_headers
+  ${LUAJIT_DIR}/src/lauxlib.h
+  ${LUAJIT_DIR}/src/lua.h
+  ${LUAJIT_DIR}/src/luaconf.h
+  ${LUAJIT_DIR}/src/lualib.h
+  ${LUAJIT_DIR}/src/luajit.h)
 
 add_executable(minilua ${LUAJIT_DIR}/src/host/minilua.c)
 SET_TARGET_PROPERTIES(minilua PROPERTIES COMPILE_DEFINITIONS "${TARGET_ARCH}")
@@ -266,6 +273,8 @@ add_custom_command(OUTPUT ${LUAJIT_DIR}/src/luajit_relver.txt
 
 add_custom_command(OUTPUT ${LUAJIT_DIR}/src/luajit.h
   COMMAND minilua host/genversion.lua
+  COMMAND mkdir -p ${includeDir}
+  COMMAND cp ${luajit_headers} ${includeDir}
   WORKING_DIRECTORY ${LUAJIT_DIR}/src
   DEPENDS ${LUAJIT_DIR}/src/luajit_rolling.h
   DEPENDS ${LUAJIT_DIR}/src/luajit_relver.txt
@@ -385,20 +394,12 @@ ELSE()
   SET_TARGET_PROPERTIES(luajit PROPERTIES ENABLE_EXPORTS ON)
 ENDIF()
 
-set(luajit_headers
-  ${LUAJIT_DIR}/src/lauxlib.h
-  ${LUAJIT_DIR}/src/lua.h
-  ${LUAJIT_DIR}/src/luaconf.h
-  ${LUAJIT_DIR}/src/lualib.h
-  ${LUAJIT_DIR}/src/luajit.h)
-set(includeDir ${CMAKE_CURRENT_BINARY_DIR}/include)
-file(COPY ${luajit_headers} DESTINATION ${includeDir})
+add_library(luajit::lib ALIAS luajit-5.1)
+add_executable(luajit:lua ALIAS luajit)
+
 add_library(luajit-header INTERFACE)
 target_include_directories(luajit-header INTERFACE ${includeDir})
-
-add_library(luajit::lib ALIAS luajit-5.1)
 add_library(luajit::header ALIAS luajit-header)
-add_executable(luajit:lua ALIAS luajit)
 
 MACRO(LUAJIT_add_custom_commands luajit_target)
   SET(target_srcs "")
