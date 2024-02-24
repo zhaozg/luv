@@ -10,15 +10,14 @@ BUILD_STATIC_LIBS ?= OFF
 WITH_SHARED_LIBUV ?= OFF
 WITH_LUA_ENGINE ?= LuaJIT
 LUA_BUILD_TYPE ?= Static
-LUA_COMPAT53_DIR ?= deps/lua-compat-5.3
 BUILD_DIR ?= build
 # options: Release, Debug, RelWithDebInfo, MinSizeRel
 BUILD_TYPE ?= RelWithDebInfo
 
 ifeq ($(WITH_LUA_ENGINE), LuaJIT)
-  LUABIN=build/luajit
+  LUABIN=build/lua/luajit
 else
-  LUABIN=build/lua
+  LUABIN=build/lua/lua
 endif
 
 CMAKE_OPTIONS += \
@@ -28,7 +27,6 @@ CMAKE_OPTIONS += \
 	-DWITH_SHARED_LIBUV=$(WITH_SHARED_LIBUV) \
 	-DWITH_LUA_ENGINE=$(WITH_LUA_ENGINE) \
 	-DLUA_BUILD_TYPE=$(LUA_BUILD_TYPE) \
-	-DLUA_COMPAT53_DIR=$(LUA_COMPAT53_DIR) \
 	-DCMAKE_BUILD_TYPE=$(BUILD_TYPE)
 
 ifdef INSTALL_PREFIX
@@ -49,13 +47,10 @@ all: luv
 deps/libuv/include:
 	git submodule update --init deps/libuv
 
-deps/luajit/src:
-	git submodule update --init deps/luajit
+deps/lua-forge/cmake:
+	git submodule update --init deps/lua-forge
 
-deps/lua-compat-5.3/c-api:
-	git submodule update --init deps/lua-compat-5.3
-
-$(BUILD_DIR)/Makefile: deps/libuv/include deps/luajit/src deps/lua-compat-5.3/c-api
+$(BUILD_DIR)/Makefile: deps/libuv/include deps/lua-forge/cmake
 	cmake -H. -B$(BUILD_DIR) ${CMAKE_OPTIONS}
 
 luv: $(BUILD_DIR)/Makefile

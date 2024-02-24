@@ -113,7 +113,10 @@ else (LUA_BUILD_TYPE STREQUAL System)
 
   if(DEFINED ENV{LUA_FORGE_DIR})
     set(LUA_FORGE_DIR $ENV{LUA_FORGE_DIR})
+  else()
+    set(LUA_FORGE_DIR deps/lua-forge)
   endif()
+
   get_directory_property(hasParent PARENT_DIRECTORY)
 
   if (USE_LUAJIT)
@@ -231,8 +234,9 @@ if(APPLE)
 endif()
 
 if(NOT LUA_COMPAT53_DIR)
-  set(LUA_COMPAT53_DIR deps/lua-compat-5.3)
+  set(LUA_COMPAT53_DIR ${LUA_FORGE_DIR}/thirdparty/compat-5.3)
 endif()
+
 if(DEFINED ENV{LUA_COMPAT53_DIR})
   set(LUA_COMPAT53_DIR $ENV{LUA_COMPAT53_DIR})
 endif()
