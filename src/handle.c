@@ -98,8 +98,6 @@ static void luv_close_cb(uv_handle_t* handle) {
   if(data->ref > 0) {
     luv_call_callback(L, data, LUV_CLOSED, 0);
     luv_unref_handle(L, data);
-  } else {
-    luv_handle_free(handle);
   }
 }
 
