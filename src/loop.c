@@ -92,6 +92,7 @@ static int luv_update_time(lua_State* L) {
 static void luv_walk_cb(uv_handle_t* handle, void* arg) {
   lua_State* L = (lua_State*)arg;
   luv_handle_t* data = (luv_handle_t*)handle->data;
+  if (!data || !data->ctx) return;
 
   // Sanity check
   // Most invalid values are large and refs are small, 0x1000000 is arbitrary.
