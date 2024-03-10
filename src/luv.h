@@ -122,6 +122,9 @@ LUALIB_API lua_State* luv_state(lua_State* L);
 */
 LUALIB_API uv_loop_t* luv_loop(lua_State* L);
 
+
+LUALIB_API void luv_walk_close(lua_State* L, uv_loop_t* loop, int wait);
+
 /* Set or clear an external uv_loop_t in a lua_State
    When using a custom/external loop, this must be called before luaopen_luv
    (otherwise luv will create and use its own loop)
