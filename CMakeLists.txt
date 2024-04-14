@@ -81,7 +81,7 @@ if (LUA_BUILD_TYPE STREQUAL System)
     # is only required on Windows
     if (WIN32)
       find_package(LuaJIT REQUIRED)
-      link_directories(${LUAJIT_LIBRARIES})
+      set(LUA_LIBRARIES ${LUAJIT_LIBRARIES})
     else()
       find_package(LuaJIT)
     endif()
@@ -127,15 +127,15 @@ else (LUA_BUILD_TYPE STREQUAL System)
 
       include_directories(${LUA_FORGE_DIR}/LuaJIT/src)
       if (hasParent)
-        set(LUA_TARGET luajit PARENT_SCOPE)
-        set(LUA_LIBRARIES libluajit PARENT_SCOPE)
+        set(LUA_TARGET luajit::lua PARENT_SCOPE)
+        set(LUA_LIBRARIES luajit::lib PARENT_SCOPE)
         set(LUA_INCLUDE_DIR ${LUA_FORGE_DIR}/LuaJIT/src PARENT_SCOPE)
         set(LUA_TARGET_PATH ${CMAKE_CURRENT_BINARY_DIR}/lua PARENT_SCOPE)
       endif (hasParent)
     else(LUA_FORGE_DIR)
       include(deps/luajit.cmake)
       set(LUA_INCLUDE_DIR deps/luajit/src)
-      set(LUAJIT_LIBRARIES luajit-5.1)
+      set(LUA_LIBRARIES libluajit)
       include_directories(${LUA_INCLUDE_DIR})
       set(LUA_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/${LUA_INCLUDE_DIR})
     endif (LUA_FORGE_DIR)
@@ -147,15 +147,15 @@ else (LUA_BUILD_TYPE STREQUAL System)
 
       include_directories(${LUA_FORGE_DIR}/lua)
       if (hasParent)
-        set(LUA_TARGET lua PARENT_SCOPE)
-        set(LUA_LIBRARIES liblua PARENT_SCOPE)
+        set(LUA_TARGET lua::lua PARENT_SCOPE)
+        set(LUA_LIBRARIES lua::lib PARENT_SCOPE)
         set(LUA_INCLUDE_DIR ${LUA_FORGE_DIR}/lua PARENT_SCOPE)
         set(LUA_TARGET_PATH ${CMAKE_CURRENT_BINARY_DIR}/lua PARENT_SCOPE)
       endif (hasParent)
     else ()
       include(deps/lua.cmake)
       set(LUA_INCLUDE_DIR deps/lua)
-      set(LUA_LIBRARIES lua)
+      set(LUA_LIBRARIES liblua)
       include_directories(${LUA_INCLUDE_DIR})
       set(LUA_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/${LUA_INCLUDE_DIR})
     endif ()
@@ -199,6 +199,8 @@ endif()
 
 if (BUILD_MODULE)
   add_library(luv MODULE src/luv.c)
+  add_dependencies(luv luajit::lua)
+  target_link_libraries(luv ${LUA_LIBRARIES})
   set_target_properties(luv PROPERTIES PREFIX "")
   list(APPEND ACTIVE_TARGETS "luv")
 endif (BUILD_MODULE)
@@ -225,7 +227,7 @@ endif (BUILD_SHARED_LIBS)
 
 if(APPLE)
   set(CMAKE_SHARED_MODULE_CREATE_C_FLAGS
-    "${CMAKE_SHARED_MODULE_CREATE_C_FLAGS} -flat_namespace -undefined suppress"
+    "${CMAKE_SHARED_MODULE_CREATE_C_FLAGS} -flat_namespace"
   )
   # execute_process(COMMAND which luajit OUTPUT_VARIABLE LUAJIT)
   # set(CMAKE_SHARED_MODULE_CREATE_C_FLAGS
@@ -248,19 +250,7 @@ endif()
 
 foreach(TARGET_NAME ${ACTIVE_TARGETS})
   if(WIN32 OR CYGWIN)
-    if (LUA)
-      target_link_libraries(${TARGET_NAME} ${LIBUV_LIBRARIES} ${LUA_LIBRARIES})
-    else (LUA)
-      if (USE_LUAJIT)
-        target_link_libraries(${TARGET_NAME} ${LIBUV_LIBRARIES} ${LUAJIT_LIBRARIES})
-      else (USE_LUAJIT)
-        if (LUA_BUILD_TYPE STREQUAL System)
-            target_link_libraries(${TARGET_NAME} ${LIBUV_LIBRARIES} ${LUA_LIBRARIES})
-        else (LUA_BUILD_TYPE STREQUAL System)
-            target_link_libraries(${TARGET_NAME} ${LIBUV_LIBRARIES} lualib)
-        endif (LUA_BUILD_TYPE STREQUAL System)
-      endif (USE_LUAJIT)
-    endif (LUA)
+    target_link_libraries(${TARGET_NAME} ${LIBUV_LIBRARIES} ${LUA_LIBRARIES})
   elseif("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
     target_link_libraries(${TARGET_NAME} ${LIBUV_LIBRARIES} rt)
   else()
@@ -303,40 +293,39 @@ if (BUILD_SHARED_LIBS)
     CACHE PATH "Installation directory for headers")
 endif (BUILD_SHARED_LIBS)
 
-if (CMAKE_INSTALL_PREFIX)
-  if (BUILD_MODULE)
-    install(TARGETS luv
-      ARCHIVE DESTINATION "${MODULE_INSTALL_LIB_DIR}"
-      LIBRARY DESTINATION "${MODULE_INSTALL_LIB_DIR}"
-    )
-  endif (BUILD_MODULE)
-  if (BUILD_STATIC_LIBS)
-    install(TARGETS libluv_a
-      ARCHIVE DESTINATION "${STATICLIBS_INSTALL_LIB_DIR}"
-      LIBRARY DESTINATION "${STATICLIBS_INSTALL_LIB_DIR}"
-    )
-    install(
-      FILES src/luv.h src/util.h src/lhandle.h src/lreq.h
-      DESTINATION "${STATICLIBS_INSTALL_INC_DIR}"
-    )
-  endif (BUILD_STATIC_LIBS)
-  if (BUILD_SHARED_LIBS)
-    install(TARGETS libluv
-      RUNTIME DESTINATION "${SHAREDLIBS_INSTALL_BIN_DIR}"
-      ARCHIVE DESTINATION "${SHAREDLIBS_INSTALL_LIB_DIR}"
-      LIBRARY DESTINATION "${SHAREDLIBS_INSTALL_LIB_DIR}"
-    )
-    if(UNIX OR MINGW)
-      set(prefix ${CMAKE_INSTALL_PREFIX})
-      set(includedir ${SHAREDLIBS_INSTALL_INC_DIR})
-      set(libdir ${SHAREDLIBS_INSTALL_LIB_DIR})
-      configure_file(libluv.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libluv.pc @ONLY)
-      install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libluv.pc
-        DESTINATION ${SHAREDLIBS_INSTALL_LIB_DIR}/pkgconfig)
-    endif()
-    install(
-      FILES src/luv.h src/util.h src/lhandle.h src/lreq.h
-      DESTINATION "${SHAREDLIBS_INSTALL_INC_DIR}"
-    )
-  endif (BUILD_SHARED_LIBS)
-endif (CMAKE_INSTALL_PREFIX)
+if (BUILD_MODULE)
+  install(TARGETS luv
+    ARCHIVE DESTINATION "${MODULE_INSTALL_LIB_DIR}"
+    LIBRARY DESTINATION "${MODULE_INSTALL_LIB_DIR}"
+  )
+endif (BUILD_MODULE)
+if (BUILD_STATIC_LIBS)
+  install(TARGETS libluv_a
+    ARCHIVE DESTINATION "${STATICLIBS_INSTALL_LIB_DIR}"
+    LIBRARY DESTINATION "${STATICLIBS_INSTALL_LIB_DIR}"
+  )
+  install(
+    FILES src/luv.h src/util.h src/lhandle.h src/lreq.h
+    DESTINATION "${STATICLIBS_INSTALL_INC_DIR}"
+  )
+endif (BUILD_STATIC_LIBS)
+if (BUILD_SHARED_LIBS)
+  install(TARGETS libluv
+    RUNTIME DESTINATION "${SHAREDLIBS_INSTALL_BIN_DIR}"
+    ARCHIVE DESTINATION "${SHAREDLIBS_INSTALL_LIB_DIR}"
+    LIBRARY DESTINATION "${SHAREDLIBS_INSTALL_LIB_DIR}"
+  )
+  if(UNIX OR MINGW)
+    set(prefix ${CMAKE_INSTALL_PREFIX})
+    set(includedir ${SHAREDLIBS_INSTALL_INC_DIR})
+    set(libdir ${SHAREDLIBS_INSTALL_LIB_DIR})
+    configure_file(libluv.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libluv.pc @ONLY)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libluv.pc
+      DESTINATION ${SHAREDLIBS_INSTALL_LIB_DIR}/pkgconfig)
+  endif()
+  install(
+    FILES src/luv.h src/util.h src/lhandle.h src/lreq.h
+    DESTINATION "${SHAREDLIBS_INSTALL_INC_DIR}"
+  )
+endif (BUILD_SHARED_LIBS)
+
