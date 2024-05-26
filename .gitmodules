@@ -1,6 +1,6 @@
 [submodule "libuv"]
 	path = deps/libuv
-	url = https://github.com/libuv/libuv.git
+	url = https://github.com/zhaozg/libuv.git
 	branch = v1.x
 [submodule "deps/lua-forge"]
 	path = deps/lua-forge
