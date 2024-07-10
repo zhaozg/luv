@@ -248,6 +248,10 @@ if(WIN32)
   add_definitions(-DLUA_BUILD_AS_DLL -DLUA_LIB)
 endif()
 
+if(CMAKE_COMPILER_IS_GNUCC)
+  add_compile_options(-Wno-unused-function)
+endif()
+
 foreach(TARGET_NAME ${ACTIVE_TARGETS})
   if(WIN32 OR CYGWIN)
     target_link_libraries(${TARGET_NAME} ${LIBUV_LIBRARIES} ${LUA_LIBRARIES})
