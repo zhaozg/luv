@@ -4051,6 +4051,58 @@ metrics counters.
 - `events` : `integer`
 - `events_waiting` : `integer`
 
+## String manipulation functions
+
+These string utilities are needed internally for dealing with Windows, and are exported to allow clients to work uniformly with this data when the libuv API is not complete.
+
+**Note**:
+
+1. New in luv version 1.49.0.
+2. A UTF-16 character is 2 bytes, and a UTF-8 character is 1 byte.
+3. All input and returned utf8 string or utf16 string should be NULL-terminated or these API.
+
+### `uv.utf16_length_as_wtf8()`
+
+Get the length of a UTF-16 (or UCS-2) utf16 value after converting it to WTF-8.
+If utf16 is NUL terminated, utf16_len can be set to -1, otherwise it must be specified.
+
+**Parameters:**
+- `utf16_str`: `string`
+- `utf16_len`: `integer` or `nil` (default: `-1`)
+
+**Returns:** `integer`
+
+### `uv.utf16_to_wtf8()`
+
+Convert UTF-16 (or UCS-2) string in utf16 to UTF-8 string. The utf16_len count (in characters)
+gives the length of utf16. If utf16 is NUL terminated, default utf16_len can be set to -1, otherwise it
+must be specified.
+
+**Parameters:**
+- `utf16_str`: `string`
+- `utf16_len`: `integer` or `nil` (default: `-1`)
+
+**Returns:** `string`
+
+### `uv.wtf8_length_as_utf16()`
+
+Get the length in characters of a NUL-terminated WTF-8 wtf8 value after converting it to UTF-16 (or UCS-2), including NUL terminator.
+
+**Parameters:**
+- `utf8_str`: `string`
+
+**Returns:** `integer`
+
+### `uv.wtf8_to_utf16()`
+
+Convert NUL-terminated WTF-8 string in wtf8 to UTF-16 (or UCS-2) string in utf16.
+The utf16_str must end with the NUL terminator.
+
+**Parameters:**
+- `utf8_str`: `string`
+
+**Returns:** `string`
+
 ---
 
 [luv]: https://github.com/luvit/luv
