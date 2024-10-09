@@ -782,3 +782,62 @@ static int luv_clock_gettime(lua_State* L) {
   return 1;
 }
 #endif
+
+#if LUV_UV_VERSION_GEQ(1, 49, 0)
+
+static int luv_utf16_length_as_wtf8(lua_State* L) {
+  size_t sz;
+  const uint16_t *utf16 = (const uint16_t *)luaL_checklstring(L, 1, &sz);
+  ssize_t utf16_len = luaL_optinteger(L, 2, sz/2);
+  sz = uv_utf16_length_as_wtf8(utf16, utf16_len);
+  lua_pushinteger(L, sz);
+  return 1;
+}
+
+static int luv_utf16_to_wtf8(lua_State *L) {
+  int ret;
+  size_t sz;
+  const uint16_t *utf16 = (const uint16_t *)luaL_checklstring(L, 1, &sz);
+  ssize_t utf16_len = luaL_optinteger(L, 2, sz/2);
+  sz = uv_utf16_length_as_wtf8(utf16, utf16_len) + 1;
+
+  char *wtf8 = malloc(sz);
+  if (wtf8 == NULL) return luaL_error(L, "failed to allocate %zu bytes", sz);
+  ret = uv_utf16_to_wtf8(utf16, utf16_len, &wtf8, &sz);
+  if (ret == 0) {
+    lua_pushlstring(L, wtf8, sz);
+    ret = 1;
+  } else {
+    ret = luv_error(L, ret);
+  }
+  free(wtf8);
+  return ret;
+}
+
+static int luv_wtf8_length_as_utf16(lua_State *L) {
+  size_t sz;
+  ssize_t ssz;
+  const char* utf8 = luaL_checklstring(L, 1, &sz);
+  luaL_argcheck (L, sz > 1 && utf8[sz-1] == '\0',
+                 1, "expected NULL-terminated string");
+  ssz = uv_wtf8_length_as_utf16(utf8);
+  lua_pushinteger(L, ssz);
+  return 1;
+}
+
+static int luv_wtf8_to_utf16(lua_State *L) {
+  size_t sz;
+  ssize_t ssz;
+  uint16_t *utf16;
+  const char* utf8 = luaL_checklstring(L, 1, &sz);
+  luaL_argcheck (L, sz > 1 && utf8[sz-1] == '\0',
+                 1, "expected NULL-terminated string");
+  ssz = uv_wtf8_length_as_utf16(utf8);
+  utf16 = (uint16_t*)malloc(ssz * 2);
+  uv_wtf8_to_utf16(utf8, utf16, ssz);
+  lua_pushlstring(L, (const char*)utf16, ssz * 2);
+  free(utf16);
+  return 1;
+}
+
+#endif
