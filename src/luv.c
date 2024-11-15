@@ -716,9 +716,11 @@ LUALIB_API int luv_cfpcall(lua_State* L, int nargs, int nresult, int flags) {
   case LUA_OK:
     break;
   case LUA_ERRMEM:
-    if ((flags & LUVF_CALLBACK_NOERRMSG) == 0)
+    if ((flags & LUVF_CALLBACK_NOERRMSG) == 0) {
       fprintf(stderr, "System Error: %s\n",
               luaL_tolstring(L, lua_absindex(L, -1), NULL));
+      lua_pop(L, 1); // Remove error string pushed by luaL_tolstring()
+    }
     if ((flags & LUVF_CALLBACK_NOEXIT) == 0)
       exit(-1);
     lua_pop(L, 1);
@@ -727,9 +729,11 @@ LUALIB_API int luv_cfpcall(lua_State* L, int nargs, int nresult, int flags) {
   case LUA_ERRRUN:
   case LUA_ERRERR:
   default:
-    if ((flags & LUVF_CALLBACK_NOERRMSG) == 0)
+    if ((flags & LUVF_CALLBACK_NOERRMSG) == 0) {
       fprintf(stderr, "Uncaught Error: %s\n",
               luaL_tolstring(L, lua_absindex(L, -1), NULL));
+      lua_pop(L, 1); // Remove error string pushed by luaL_tolstring()
+    }
     if ((flags & LUVF_CALLBACK_NOEXIT) == 0)
       exit(-1);
     lua_pop(L, 1);
@@ -771,6 +775,9 @@ LUALIB_API luv_ctx_t* luv_context(lua_State* L) {
     ctx = (luv_ctx_t*)lua_newuserdata(L, sizeof(*ctx));
     memset(ctx, 0, sizeof(*ctx));
     lua_rawset(L, LUA_REGISTRYINDEX);
+    // create table to contain internal handle
+    lua_newtable(L);
+    ctx->ht_ref = luaL_ref(L, LUA_REGISTRYINDEX);
   } else {
     ctx = (luv_ctx_t*)lua_touserdata(L, -1);
   }
@@ -859,6 +866,15 @@ static int loop_gc(lua_State *L) {
 }
 
 LUALIB_API int luaopen_luv (lua_State* L) {
+#ifdef LUA_RIDX_MAINTHREAD
+  // Lua 5.2+ - resolve the main thread of the current Lua state, even if
+  // we were loaded from a different thread (which may become suspended/dead).
+  lua_geti(L, LUA_REGISTRYINDEX, LUA_RIDX_MAINTHREAD);
+  lua_State* ctxL = lua_tothread(L, -1);
+  lua_pop(L, 1);
+#else
+  lua_State* ctxL = L;
+#endif
   luv_ctx_t* ctx = luv_context(L);
 
   luaL_newlib(L, luv_functions);
@@ -886,7 +902,7 @@ LUALIB_API int luaopen_luv (lua_State* L) {
     lua_rawset(L, -3);
 
     ctx->loop = loop;
-    ctx->L = L;
+    ctx->L = ctxL;
     ctx->mode = -1;
 
     ret = uv_loop_init(loop);
