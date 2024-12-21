@@ -856,12 +856,11 @@ static int loop_gc(lua_State *L) {
 
   luv_walk_close(L, loop, 1);
 
-  lua_pushlightuserdata(L, ctx);
-  lua_rawget(L, LUA_REGISTRYINDEX);
-  if (lua_toboolean(L, -1))
+  /* do cleanup in main thread */
+  lua_getglobal(L, "_THREAD");
+  if (lua_isnil(L, -1))
     luv_work_cleanup();
   lua_pop(L, 1);
-
   return 0;
 }
 
