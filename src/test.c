@@ -63,8 +63,9 @@ static lua_State *vm_acquire(uv_loop_t* loop) {
 static void vm_release(lua_State* L) { lua_close(L); }
 
 
-static lua_State* luv_thread_acquire_vm(void) {
+static lua_State* luv_thread_acquire_vm(uv_loop_t* loop) {
   lua_State* L = vm_acquire(NULL);  /* create state */
+  (void)loop;
 
   lua_pushboolean(L, 1);
   lua_setglobal(L, "_THREAD");
