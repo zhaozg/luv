@@ -112,7 +112,7 @@ static void luv_walk_cb(uv_handle_t* handle, void* arg) {
   // Most invalid values are large and refs are small, 0x1000000 is arbitrary.
   assert(data && data->ref < 0x1000000);
 
-  lua_pushvalue(L, 1);           // Copy the function
+  lua_rawgetp(L, LUA_REGISTRYINDEX, luv_walk_cb);    // Get the walk function
   luv_find_handle(L, data);      // Get the userdata
   data->ctx->cb_pcall(L, 1, 0, LUVF_CALLBACK_FLAGS);  // Call the function
 }
@@ -120,7 +120,11 @@ static void luv_walk_cb(uv_handle_t* handle, void* arg) {
 static int luv_walk(lua_State* L) {
   luv_ctx_t* ctx = luv_context(L);
   luaL_checktype(L, 1, LUA_TFUNCTION);
+  lua_pushvalue(L, 1);
+  lua_rawsetp(L, LUA_REGISTRYINDEX, luv_walk_cb);
   uv_walk(luv_loop(L), luv_walk_cb, ctx);
+  lua_pushnil(L);
+  lua_rawsetp(L, LUA_REGISTRYINDEX, luv_walk_cb);
   return 0;
 }
 
