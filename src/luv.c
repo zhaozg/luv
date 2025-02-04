@@ -418,7 +418,7 @@ static const luaL_Reg luv_functions[] = {
   // work.c
   {"new_work", luv_new_work},
   {"queue_work", luv_queue_work},
-  {"queue_usable", luv_queue_usable},
+  //{"queue_usable", luv_queue_usable},
 
   // util.c
 #if LUV_UV_VERSION_GEQ(1, 10, 0)
@@ -846,35 +846,17 @@ static void walk_cb(uv_handle_t *handle, void *arg)
   }
 }
 
-
-LUALIB_API void luv_walk_close(lua_State* L, uv_loop_t* loop, int wait)
-{
+static int loop_gc(lua_State *L) {
+  luv_ctx_t *ctx = luv_context(L);
+  uv_loop_t* loop = ctx->loop;
+  if (loop==NULL)
+    return 0;
   // Call uv_close on every active handle
   uv_walk(loop, walk_cb, NULL);
   // Run the event loop until all handles are successfully closed
-  while (wait && uv_loop_close(loop)) {
+  while (uv_loop_close(loop)) {
     uv_run(loop, UV_RUN_DEFAULT);
   }
-}
-
-static int loop_gc(lua_State *L) {
-  luv_ctx_t *ctx = luv_context(L);
-  uv_loop_t* loop = luaL_checkudata(L, 1, "uv_loop.meta");
-  if (loop==NULL)
-    return 0;
-
-  if (ctx->loop != loop) {
-    printf("never here\n");
-    assert(0);
-  }
-
-  luv_walk_close(L, loop, 1);
-
-  /* do cleanup in main thread */
-  lua_getglobal(L, "_THREAD");
-  if (lua_isnil(L, -1))
-    luv_work_cleanup();
-  lua_pop(L, 1);
   return 0;
 }
 

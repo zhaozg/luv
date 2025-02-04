@@ -17,11 +17,20 @@
 #include "private.h"
 
 typedef struct {
+  lua_State** vms;
+  unsigned int nvms;
+  unsigned int idx_vms;
+  uv_mutex_t vm_mutex;
+  int running;
+} luv_work_vms_t;
+
+typedef struct {
   lua_State* L;       /* vm in main */
   char* code;         /* thread entry code */
   size_t len;
 
   int after_work_cb;  /* ref, run in main ,call after work cb*/
+  luv_work_vms_t* vms; /* userdata owned by L, so parent thread can clean up old states */
 } luv_work_ctx_t;
 
 typedef struct {
@@ -36,18 +45,6 @@ typedef struct {
 
 static uv_once_t once_vmkey = UV_ONCE_INIT;
 static uv_key_t tls_vmkey;  /* thread local storage key for Lua state */
-static uv_mutex_t vm_mutex;
-static int vm_init = 0;
-
-static int running = 0;
-static unsigned int idx_vms = 0;
-static unsigned int nvms = 0;
-static lua_State** vms;
-static lua_State* default_vms[4];
-
-#ifndef ARRAY_SIZE
-#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
-#endif
 
 #if LUV_UV_VERSION_GEQ(1, 30, 0)
 #define MAX_THREADPOOL_SIZE 1024
@@ -130,7 +127,7 @@ static int luv_work_cb(lua_State* L) {
   return LUA_OK;
 }
 
-static lua_State* luv_work_acquire_vm(void)
+static lua_State* luv_work_acquire_vm(luv_work_vms_t* vms)
 {
   lua_State* L = uv_key_get(&tls_vmkey);
   if (L == NULL)
@@ -140,17 +137,35 @@ static lua_State* luv_work_acquire_vm(void)
     lua_pushboolean(L, 1);
     lua_setglobal(L, "_THREAD");
 
-    uv_mutex_lock(&vm_mutex);
-    vms[idx_vms] = L;
-    idx_vms += 1;
-    uv_mutex_unlock(&vm_mutex);
+    uv_mutex_lock(&vms->vm_mutex);
+    vms->vms[vms->idx_vms] = L;
+    vms->idx_vms += 1;
+    uv_mutex_unlock(&vms->vm_mutex);
   }
   return L;
 }
 
+static int luv_work_cleanup(lua_State *L)
+{
+  unsigned int i;
+  luv_work_vms_t *vms = (luv_work_vms_t*)lua_touserdata(L, 1);
+
+  if (!vms || vms->nvms == 0)
+    return 0;
+
+  for (i = 0; i < vms->nvms && vms->vms[i]; i++)
+    release_vm_cb(vms->vms[i]);
+
+  free(vms->vms);
+
+  uv_mutex_destroy(&vms->vm_mutex);
+  vms->nvms = 0;
+  return 0;
+}
+
 static void luv_work_cb_wrapper(uv_work_t* req) {
   luv_work_t* work =  (luv_work_t*)req->data;
-  lua_State *L = luv_work_acquire_vm();
+  lua_State *L = luv_work_acquire_vm(work->ctx->vms);
   luv_ctx_t* lctx = luv_context(L);
 
   // If exit is called on a thread in the thread pool, abort is called in
@@ -169,9 +184,9 @@ static void luv_after_work_cb(uv_work_t* req, int status) {
   luv_ctx_t *lctx = luv_context(L);
   int i;
 
-  uv_mutex_lock(&vm_mutex);
-  running--;
-  uv_mutex_unlock(&vm_mutex);
+  //uv_mutex_lock(&vm_mutex);
+  //running--;
+  //uv_mutex_unlock(&vm_mutex);
 
   lua_rawgeti(L, LUA_REGISTRYINDEX, ctx->after_work_cb);
   if (status == 0) {
@@ -206,6 +221,10 @@ static int luv_new_work(lua_State* L) {
   ctx = (luv_work_ctx_t*)lua_newuserdata(L, sizeof(*ctx));
   memset(ctx, 0, sizeof(*ctx));
 
+  lua_rawgetp(L, LUA_REGISTRYINDEX, &luv_work_cleanup);
+  ctx->vms = (luv_work_vms_t*)lua_touserdata(L, -1);
+  lua_pop(L, 1);
+
   ctx->len = len;
   ctx->code = code;
 
@@ -225,9 +244,9 @@ static int luv_queue_work(lua_State* L) {
   luv_work_t* work = lua_newuserdata(L, sizeof(luv_work_t));
   int ret;
 
-  uv_mutex_lock(&vm_mutex);
-  running++;
-  uv_mutex_unlock(&vm_mutex);
+  //uv_mutex_lock(&vm_mutex);
+  //running++;
+  //uv_mutex_unlock(&vm_mutex);
 
   memset(work, 0, sizeof(*work));
   luaL_setmetatable(L, "uv_work");
@@ -255,17 +274,17 @@ static int luv_queue_work(lua_State* L) {
   return 1;
 }
 
-static int luv_queue_usable(lua_State* L) {
-  uv_mutex_lock(&vm_mutex);
-  lua_pushboolean(L, running >=0 && running + 1 < nvms);
-  lua_pushinteger(L, running);
-  uv_mutex_unlock(&vm_mutex);
-  return 2;
-};
+//static int luv_queue_usable(lua_State* L) {
+//  uv_mutex_lock(&vm_mutex);
+//  lua_pushboolean(L, running >=0 && running + 1 < nvms);
+//  lua_pushinteger(L, running);
+//  uv_mutex_unlock(&vm_mutex);
+//  return 2;
+//};
 
 static const luaL_Reg luv_work_ctx_methods[] = {
   {"queue", luv_queue_work},
-  {"usable", luv_queue_usable},
+  //{"usable", luv_queue_usable},
 
   {NULL, NULL}
 };
@@ -301,7 +320,6 @@ static const luaL_Reg luv_work_methods[] = {
 
 static void luv_key_init_once(void)
 {
-  const char* val;
   int status = uv_key_create(&tls_vmkey);
   if (status != 0)
   {
@@ -310,59 +328,6 @@ static void luv_key_init_once(void)
       uv_err_name(status), uv_strerror(status));
     abort();
   }
-  status = uv_mutex_init(&vm_mutex);
-  if (status != 0)
-  {
-    fprintf(stderr, "*** threadpool not works\n");
-    fprintf(stderr, "Error to uv_mutex_init with %s: %s\n",
-      uv_err_name(status), uv_strerror(status));
-    abort();
-  }
-
-  /* ref to https://github.com/libuv/libuv/blob/v1.x/src/threadpool.c init_threads */
-  nvms = ARRAY_SIZE(default_vms);
-  val = getenv("UV_THREADPOOL_SIZE");
-  if (val != NULL)
-    nvms = atoi(val);
-  if (nvms == 0)
-    nvms = 1;
-  if (nvms > MAX_THREADPOOL_SIZE)
-    nvms = MAX_THREADPOOL_SIZE;
-
-  vms = default_vms;
-  if (nvms > ARRAY_SIZE(default_vms)) {
-    vms = malloc(nvms * sizeof(vms[0]));
-    if (vms == NULL) {
-      nvms = ARRAY_SIZE(default_vms);
-      vms = default_vms;
-    }
-    memset(vms, 0, sizeof(vms[0]) * nvms);
-  }
-}
-
-static void luv_work_cleanup(void)
-{
-  unsigned int i;
-
-  if (nvms == 0)
-    return;
-
-  uv_mutex_lock(&vm_mutex);
-  nvms = 0;
-  for (i = 0; i < idx_vms && vms[i]; i++)
-  {
-    release_vm_cb(vms[i]);
-    vms[i] = NULL;
-  }
-  idx_vms = 0;
-
-  if (vms != default_vms)
-  {
-    free(vms);
-  }
-  uv_mutex_unlock(&vm_mutex);
-
-  uv_mutex_destroy(&vm_mutex);
 }
 
 static void luv_work_init(lua_State* L) {
@@ -376,26 +341,41 @@ static void luv_work_init(lua_State* L) {
   lua_setfield(L, -2, "__index");
   lua_pop(L, 1);
 
-  luaL_newmetatable(L, "uv_work");
-  lua_pushcfunction(L, luv_work_tostring);
-  lua_setfield(L, -2, "__tostring");
-  lua_pushcfunction(L, luv_work_gc);
+  luaL_newmetatable(L, "luv_work_vms");
+  lua_pushcfunction(L, luv_work_cleanup);
   lua_setfield(L, -2, "__gc");
-  luaL_newlib(L, luv_work_methods);
-  lua_setfield(L, -2, "__index");
   lua_pop(L, 1);
 
-  uv_once(&once_vmkey, luv_key_init_once);
-  uv_mutex_lock(&vm_mutex);
-  if (vm_init==0)
+  /* ref to https://github.com/libuv/libuv/blob/v1.x/src/threadpool.c init_threads */
+  const char* val;
+  unsigned int nvms = 4;
+  val = getenv("UV_THREADPOOL_SIZE");
+  if (val != NULL)
+    nvms = atoi(val);
+  if (nvms == 0)
+    nvms = 1;
+  if (nvms > MAX_THREADPOOL_SIZE)
+    nvms = MAX_THREADPOOL_SIZE;
+
+  luv_work_vms_t* vms = (luv_work_vms_t*)lua_newuserdata(L, sizeof(luv_work_vms_t));
+  int status = uv_mutex_init(&vms->vm_mutex);
+  if (status != 0)
   {
-    luv_ctx_t *ctx = luv_context(L);
-    vm_init = 1;
-
-    lua_pushlightuserdata(L, ctx);
-    lua_pushboolean(L, 1);
-    lua_rawset(L, LUA_REGISTRYINDEX);
+    fprintf(stderr, "*** threadpool not works\n");
+    fprintf(stderr, "Error to uv_mutex_init with %s: %s\n",
+      uv_err_name(status), uv_strerror(status));
+    abort();
   }
-  uv_mutex_unlock(&vm_mutex);
 
+  vms->vms = (lua_State**)calloc(nvms, sizeof(lua_State*));
+  vms->nvms = nvms;
+  vms->idx_vms = 0;
+
+  luaL_getmetatable(L, "luv_work_vms");
+  lua_setmetatable(L, -2);
+
+  // store the luv_work_vms_t in registry
+  lua_rawsetp(L, LUA_REGISTRYINDEX, &luv_work_cleanup);
+
+  uv_once(&once_vmkey, luv_key_init_once);
 }
