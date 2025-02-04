@@ -266,9 +266,9 @@ add_executable(test EXCLUDE_FROM_ALL src/test.c src/luv.c)
 # Need to link Lua/LuaJIT libraries on non-Windows for the test executable
 if ((LUAJIT_LIBRARIES OR LUA_LIBRARIES) AND NOT (WIN32 OR CYGWIN))
   if(USE_LUAJIT)
-    target_link_libraries(test ${LUAJIT_LIBRARIES})
+    target_link_libraries(test luajit::lib)
   else()
-    target_link_libraries(test ${LUA_LIBRARIES})
+    target_link_libraries(test lua::lib)
   endif()
 endif()
 list(APPEND ACTIVE_TARGETS "test")
@@ -353,4 +353,3 @@ if (BUILD_SHARED_LIBS)
     DESTINATION "${SHAREDLIBS_INSTALL_INC_DIR}"
   )
 endif (BUILD_SHARED_LIBS)
-
