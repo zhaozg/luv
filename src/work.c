@@ -21,7 +21,6 @@ typedef struct {
   unsigned int nvms;
   unsigned int idx_vms;
   uv_mutex_t vm_mutex;
-  int running;
 } luv_work_vms_t;
 
 typedef struct {
@@ -45,6 +44,8 @@ typedef struct {
 
 static uv_once_t once_vmkey = UV_ONCE_INIT;
 static uv_key_t tls_vmkey;  /* thread local storage key for Lua state */
+static uv_mutex_t vm_mutex;
+static int running;
 
 #if LUV_UV_VERSION_GEQ(1, 30, 0)
 #define MAX_THREADPOOL_SIZE 1024
@@ -184,9 +185,9 @@ static void luv_after_work_cb(uv_work_t* req, int status) {
   luv_ctx_t *lctx = luv_context(L);
   int i;
 
-  //uv_mutex_lock(&vm_mutex);
-  //running--;
-  //uv_mutex_unlock(&vm_mutex);
+  uv_mutex_lock(&vm_mutex);
+  running--;
+  uv_mutex_unlock(&vm_mutex);
 
   lua_rawgeti(L, LUA_REGISTRYINDEX, ctx->after_work_cb);
   if (status == 0) {
@@ -244,9 +245,9 @@ static int luv_queue_work(lua_State* L) {
   luv_work_t* work = lua_newuserdata(L, sizeof(luv_work_t));
   int ret;
 
-  //uv_mutex_lock(&vm_mutex);
-  //running++;
-  //uv_mutex_unlock(&vm_mutex);
+  uv_mutex_lock(&vm_mutex);
+  running++;
+  uv_mutex_unlock(&vm_mutex);
 
   memset(work, 0, sizeof(*work));
   luaL_setmetatable(L, "uv_work");
@@ -274,17 +275,23 @@ static int luv_queue_work(lua_State* L) {
   return 1;
 }
 
-//static int luv_queue_usable(lua_State* L) {
-//  uv_mutex_lock(&vm_mutex);
-//  lua_pushboolean(L, running >=0 && running + 1 < nvms);
-//  lua_pushinteger(L, running);
-//  uv_mutex_unlock(&vm_mutex);
-//  return 2;
-//};
+static int luv_queue_usable(lua_State* L) {
+  luv_work_vms_t* vms;
+
+  // fetch the luv_work_vms_t in registry
+  lua_rawgetp(L, LUA_REGISTRYINDEX, &luv_work_cleanup);
+  vms = (luv_work_vms_t*)luaL_checkudata(L, -1, "luv_work_vms");
+
+  uv_mutex_lock(&vm_mutex);
+  lua_pushboolean(L, running >=0 && running + 1 < vms->nvms);
+  lua_pushinteger(L, running);
+  uv_mutex_unlock(&vm_mutex);
+  return 2;
+};
 
 static const luaL_Reg luv_work_ctx_methods[] = {
   {"queue", luv_queue_work},
-  //{"usable", luv_queue_usable},
+  {"usable", luv_queue_usable},
 
   {NULL, NULL}
 };
@@ -325,6 +332,14 @@ static void luv_key_init_once(void)
   {
     fprintf(stderr, "*** threadpool not works\n");
     fprintf(stderr, "Error to uv_key_create with %s: %s\n",
+      uv_err_name(status), uv_strerror(status));
+    abort();
+  }
+  status = uv_mutex_init(&vm_mutex);
+  if (status != 0)
+  {
+    fprintf(stderr, "*** threadpool not works\n");
+    fprintf(stderr, "Error to uv_mutex_init with %s: %s\n",
       uv_err_name(status), uv_strerror(status));
     abort();
   }

@@ -418,7 +418,7 @@ static const luaL_Reg luv_functions[] = {
   // work.c
   {"new_work", luv_new_work},
   {"queue_work", luv_queue_work},
-  //{"queue_usable", luv_queue_usable},
+  {"queue_usable", luv_queue_usable},
 
   // util.c
 #if LUV_UV_VERSION_GEQ(1, 10, 0)
@@ -843,6 +843,17 @@ static void walk_cb(uv_handle_t *handle, void *arg)
 
   if (!uv_is_closing(handle)) {
     uv_close(handle, luv_close_cb);
+  }
+}
+
+
+LUALIB_API void luv_walk_close(lua_State* L, uv_loop_t* loop, int wait)
+{
+  // Call uv_close on every active handle
+  uv_walk(loop, walk_cb, NULL);
+  // Run the event loop until all handles are successfully closed
+  while (wait && uv_loop_close(loop)) {
+    uv_run(loop, UV_RUN_DEFAULT);
   }
 }
 
